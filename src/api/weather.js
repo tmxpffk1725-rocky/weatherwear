@@ -49,8 +49,12 @@ export const fetchWeather = async () => {
   const tmp = items.find(i => i.category === 'TMP')
   const sky = items.find(i => i.category === 'SKY')
   const wsd = items.find(i => i.category === 'WSD')
+  const pty = items.find(i => i.category === 'PTY')
 
   const skyMap = { '1': '맑음', '3': '구름많음', '4': '흐림' }
+  const ptyMap = { '1': '비', '2': '비/눈', '3': '눈', '4': '소나기' }
+  const ptyVal = pty?.fcstValue
+  const isRain = !!ptyVal && ptyVal !== '0'
 
 let locationName = '현재 위치'
   try {
@@ -65,8 +69,9 @@ let locationName = '현재 위치'
 
   return {
     temp: tmp?.fcstValue ?? '--',
-    desc: skyMap[sky?.fcstValue] ?? '--',
+    desc: isRain ? ptyMap[ptyVal] : (skyMap[sky?.fcstValue] ?? '--'),
     feel: Math.round(tmp?.fcstValue - wsd?.fcstValue * 1.5),
+    rain: isRain,
     lat,
     lon,
     location: locationName,

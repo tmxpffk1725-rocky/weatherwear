@@ -1,40 +1,38 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 body {
-  margin: 0;
-  font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-  background: #e5e5e5;
   display: flex;
   justify-content: center;
+  background: #e8e8e8;
 }
 
 .app {
-  width: 390px;
+  width: 100%;
+  max-width: 430px;
   margin: 0 auto;
   min-height: 100vh;
-  background: #ffffff;
+  background: var(--bg);
   position: relative;
 }
 
 .page-content {
-  padding-bottom: 70px;
+  padding-bottom: 78px;
 }
 
 .bottom-nav {
   position: fixed;
   bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 100%;
-  max-width: 390px;
-  height: 60px;
-  background: #ffffff;
-  border-top: 1px solid #B4B2A9;
+  max-width: 430px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: space-around;
   align-items: center;
+  z-index: 50;
 }
 
 .bottom-nav button {
@@ -43,23 +41,32 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   background: none;
   border: none;
   cursor: pointer;
   padding: 8px 0;
+  color: var(--text-mute);
+  transition: color 0.15s ease;
 }
 
 .nav-icon {
   font-size: 20px;
+  opacity: 0.45;
+  transition: opacity 0.15s ease;
 }
 
 .nav-label {
   font-size: 11px;
-  color: #888780;
+  color: var(--text-mute);
+  transition: color 0.15s ease;
+}
+
+.bottom-nav button.active .nav-icon {
+  opacity: 1;
 }
 
 .bottom-nav button.active .nav-label {
-  color: #2C2C2A;
-  font-weight: 500;
+  color: var(--ink);
+  font-weight: 600;
 }
