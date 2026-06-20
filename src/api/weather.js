@@ -2,7 +2,6 @@ import axios from 'axios'
 import { getCurrentLocation } from './location'
 
 const API_KEY = decodeURIComponent('ad271f9567ec831f9278bafa6882d81b5670b2bf48384b9a54ad7e480a292c32')
-const KAKAO_REST_KEY = '1a8159a0148482fdd5faffef3b1f926f'
 
 const getBaseTime = () => {
   const now = new Date()

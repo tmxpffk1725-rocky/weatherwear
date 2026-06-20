@@ -1,27 +1,28 @@
+require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
-const axios = require('axios')
 
 const app = express()
 app.use(cors())
 
-const NAVER_CLIENT_ID = '9K9uQADED3a7z1ntmr1s'
-const NAVER_CLIENT_SECRET = 'oUagCgMbJY'
+// API 키는 환경변수에서 읽는다 (.env, gitignore됨 / Vercel은 환경변수 설정)
+const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID
+const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET
+
 app.get('/api/shop', async (req, res) => {
-  const { query } = req.query
+  const { query, display = 10 } = req.query
   try {
-    const response = await axios.get('https://openapi.naver.com/v1/search/shop.json', {
-      params: {
-        query,
-        display: 10,
-        sort: 'sim'
-      },
+    const url =
+      'https://openapi.naver.com/v1/search/shop.json' +
+      `?query=${encodeURIComponent(query)}&display=${encodeURIComponent(display)}&sort=sim`
+    const response = await fetch(url, {
       headers: {
         'X-Naver-Client-Id': NAVER_CLIENT_ID,
         'X-Naver-Client-Secret': NAVER_CLIENT_SECRET,
-      }
+      },
     })
-    res.json(response.data)
+    const data = await response.json()
+    res.status(response.ok ? 200 : response.status).json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
