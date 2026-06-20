@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { isRecent, addHistory, cleanHistory } from './history'
+import { getSolarTerm } from './season'
 
 const CATEGORIES = ['top', 'bottom', 'outer', 'shoes']
 
@@ -75,14 +76,16 @@ const seasonalItems = (category, temp, preferredItems, rain) => {
   return cands
 }
 
-const makeQuery = (category, item, gender, situationKeyword) =>
+// 검색어 = 성별 + 아이템 + 절기 시즌 키워드 + (신발 외)상황 키워드
+const makeQuery = (category, item, gender, situationKeyword, season) =>
   category === 'shoes'
-    ? `${gender} ${item}`.trim()
-    : `${gender} ${item} ${situationKeyword}`.trim()
+    ? `${gender} ${item} ${season}`.replace(/\s+/g, ' ').trim()
+    : `${gender} ${item} ${season} ${situationKeyword}`.replace(/\s+/g, ' ').trim()
 
 // 프리셋 3개 × 카테고리별 검색어 생성 (후보를 돌려가며 다양화)
 const buildPresetQueries = (temp, situation, gender, preferredItems, rain) => {
   const situationKeyword = situationMap[situation] ?? ''
+  const season = getSolarTerm().season // 오늘 절기 기준 시즌 키워드(봄/여름/가을/겨울)
   const cands = {}
   CATEGORIES.forEach((c) => {
     cands[c] = seasonalItems(c, temp, preferredItems, rain)
@@ -94,7 +97,7 @@ const buildPresetQueries = (temp, situation, gender, preferredItems, rain) => {
     CATEGORIES.forEach((c) => {
       const list = cands[c]
       queries[c] = list.length
-        ? makeQuery(c, list[i % list.length], gender, situationKeyword)
+        ? makeQuery(c, list[i % list.length], gender, situationKeyword, season)
         : ''
     })
     presets.push(queries)

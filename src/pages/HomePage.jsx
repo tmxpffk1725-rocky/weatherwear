@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { fetchWeather } from '../api/weather'
 import { fetchOutfitPresets } from '../api/shop'
 import { getFavorites, toggleFavorite, isFavorite, removeFavorite } from '../api/favorites'
+import { getSolarTerm } from '../api/season'
 import '../styles/HomePage.css'
 
 function HomePage({ settings }) {
@@ -19,6 +20,7 @@ function HomePage({ settings }) {
   const [selectedPreset, setSelectedPreset] = useState(0)
   const [loading, setLoading] = useState(false)
   const [favorites, setFavorites] = useState(() => getFavorites())
+  const solarTerm = getSolarTerm() // 오늘 24절기 (표시 + 추천 시즌 키워드)
 
   useEffect(() => {
     fetchWeather()
@@ -92,7 +94,7 @@ function HomePage({ settings }) {
   return (
     <div className="home-page">
       <div className="weather-card">
-        <div className="weather-location">📍 {weather.location} · 자동</div>
+        <div className="weather-location">📍 {weather.location} · {solarTerm.name}</div>
         <div className="weather-temp">{weather.temp}°</div>
         <div className="weather-desc">{weather.desc} · 체감 {weather.feel}°</div>
       </div>
