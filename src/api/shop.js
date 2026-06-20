@@ -132,7 +132,8 @@ const classify = (item) => {
 
 const fetchOne = async (query, category) => {
   if (!query) return null
-  const response = await axios.get('http://localhost:3001/api/shop', {
+  // 상대경로: 로컬은 Vite 프록시(→localhost:3001), 배포(Vercel)는 동일 도메인의 서버리스 함수
+  const response = await axios.get('/api/shop', {
     params: { query, display: 10 }
   })
   const items = response.data.items
