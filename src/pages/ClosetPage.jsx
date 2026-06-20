@@ -1,18 +1,21 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import '../styles/ClosetPage.css'
 
 function ClosetPage() {
   const [selectedCategory, setSelectedCategory] = useState('전체')
   const categories = ['전체', '상의', '하의', '신발', '아우터']
 
-  const [items, setItems] = useState([
-    { id: 1, name: '오버핏 맨투맨', category: '상의', color: '네이비' },
-    { id: 2, name: '슬랙스', category: '하의', color: '블랙' },
-    { id: 3, name: '트렌치코트', category: '아우터', color: '베이지' },
-  ])
+  const [items, setItems] = useState(() => {
+    const saved = localStorage.getItem('closet_items')
+    return saved ? JSON.parse(saved) : []
+  })
 
   const [showModal, setShowModal] = useState(false)
   const [newItem, setNewItem] = useState({ name: '', category: '상의', color: '', memo: '' })
+
+  useEffect(() => {
+    localStorage.setItem('closet_items', JSON.stringify(items))
+  }, [items])
 
   const filtered = selectedCategory === '전체'
     ? items
