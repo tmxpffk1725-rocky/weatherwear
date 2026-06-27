@@ -3,10 +3,10 @@ import '../styles/ClosetPage.css'
 
 // 카테고리별 종류 프리셋 (설정의 선호 아이템 어휘와 통일)
 const CATEGORY_ITEMS = {
-  '상의': ['반팔', '니트', '맨투맨', '두꺼운니트', '기모티셔츠', '후드티', '가디건'],
-  '하의': ['반바지', '슬랙스', '치노팬츠', '청바지', '조거팬츠', '기모바지'],
-  '신발': ['스니커즈', '부츠', '로퍼', '구두', '샌들', '어그부츠'],
-  '아우터': ['얇은자켓', '바람막이', '트렌치코트', '코트', '가죽자켓', '패딩'],
+  '상의': ['반팔', '민소매', '셔츠', '카라티', '긴팔', '맨투맨', '후드티', '니트', '가디건', '두꺼운니트', '기모티'],
+  '하의': ['반바지', '린넨바지', '슬랙스', '면바지', '청바지', '조거팬츠', '와이드팬츠', '기모바지'],
+  '신발': ['샌들', '슬리퍼', '스니커즈', '운동화', '로퍼', '구두', '부츠', '어그부츠'],
+  '아우터': ['바람막이', '얇은자켓', '가디건', '자켓', '트렌치코트', '코트', '가죽자켓', '패딩'],
 }
 
 // 색상 스와치
@@ -40,6 +40,7 @@ function ClosetPage() {
 
   const [showModal, setShowModal] = useState(false)
   const [newItem, setNewItem] = useState(EMPTY_ITEM)
+  const [custom, setCustom] = useState(false) // 종류 '직접 입력' 모드
 
   useEffect(() => {
     localStorage.setItem('closet_items', JSON.stringify(items))
@@ -55,17 +56,20 @@ function ClosetPage() {
 
   // 카테고리를 바꾸면 종류 선택은 초기화(목록이 달라지므로)
   const selectCategory = (category) => {
+    setCustom(false)
     setNewItem({ ...newItem, category, name: '' })
   }
 
   const closeModal = () => {
     setShowModal(false)
+    setCustom(false)
     setNewItem(EMPTY_ITEM)
   }
 
   const addItem = () => {
-    if (!newItem.name || !newItem.color) return
-    setItems([...items, { ...newItem, id: Date.now() }])
+    if (!newItem.name.trim() || !newItem.color) return
+    setItems([...items, { ...newItem, name: newItem.name.trim(), id: Date.now() }])
+    setCustom(false)
     setNewItem(EMPTY_ITEM)
     setShowModal(false)
   }
@@ -141,13 +145,28 @@ function ClosetPage() {
                   {CATEGORY_ITEMS[newItem.category].map((name) => (
                     <button
                       key={name}
-                      className={`chip ${newItem.name === name ? 'active' : ''}`}
-                      onClick={() => setNewItem({ ...newItem, name })}
+                      className={`chip ${!custom && newItem.name === name ? 'active' : ''}`}
+                      onClick={() => { setCustom(false); setNewItem({ ...newItem, name }) }}
                     >
                       {name}
                     </button>
                   ))}
+                  <button
+                    className={`chip ${custom ? 'active' : ''}`}
+                    onClick={() => { setCustom(true); setNewItem({ ...newItem, name: '' }) }}
+                  >
+                    + 직접 입력
+                  </button>
                 </div>
+                {custom && (
+                  <input
+                    type="text"
+                    placeholder="옷 이름 입력 (예: 린넨 셋업)"
+                    value={newItem.name}
+                    onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                    autoFocus
+                  />
+                )}
               </div>
 
               <div className="input-group">
