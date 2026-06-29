@@ -138,12 +138,14 @@ const fetchOne = async (query, category) => {
   })
   const items = response.data.items
   if (!items || items.length === 0) return null
-  // 1) 실제 카테고리가 일치하는 상품만 (없으면 그 칸은 비움 — 엉뚱한 카테고리 노출 방지)
+  // 1) 카테고리 일치 우선. 단, 분류가 하나도 안 맞으면 검색 결과를 그대로 사용한다.
+  //    (LLM이 이미 해당 아이템으로 검색어를 만들었으므로, 셔츠자켓·블레이저처럼
+  //     분류기가 다른 카테고리로 잡는 하이브리드도 빈 칸이 되지 않게 함)
   const matched = items.filter((item) => classify(item) === category)
-  if (matched.length === 0) return null
+  const pool = matched.length > 0 ? matched : items
   // 2) 최근 추천한 상품 제외
-  const fresh = matched.filter((item) => !isRecent(item.productId))
-  return fresh.length > 0 ? fresh : matched
+  const fresh = pool.filter((item) => !isRecent(item.productId))
+  return fresh.length > 0 ? fresh : pool
 }
 
 // LLM에게 코디 설계 요청 (실패 시 호출부에서 룰 기반으로 폴백)
