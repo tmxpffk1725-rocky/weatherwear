@@ -4,6 +4,7 @@ import { fetchOutfitPresets } from '../api/shop'
 import { getFavorites, toggleFavorite, isFavorite, removeFavorite } from '../api/favorites'
 import { getSolarTerm } from '../api/season'
 import { COLOR_HEX } from '../api/colors'
+import { getClosetForAI } from '../api/closet'
 import '../styles/HomePage.css'
 
 function HomePage({ settings }) {
@@ -43,7 +44,8 @@ function HomePage({ settings }) {
     if (weather.feel === '--') return
     setLoading(true)
     // 추천은 실제 기온이 아니라 체감온도(feel) 기준 + 강수 여부 반영
-    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain, settings.tone, settings.fit)
+    // 옷장은 탭 전환 시 HomePage가 재마운트되므로 호출 시점에 최신을 읽는다
+    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain, settings.tone, settings.fit, getClosetForAI())
       .then((data) => {
         setPresets(data)
         setSelectedPreset(0)
@@ -67,8 +69,34 @@ function HomePage({ settings }) {
     setFavorites(removeFavorite(id))
   }
 
+  const renderColorChip = (color) =>
+    color && COLOR_HEX[color] ? (
+      <span className="outfit-color">
+        <span className="outfit-color-dot" style={{ background: COLOR_HEX[color] }} />
+        {color}
+      </span>
+    ) : null
+
   const renderItem = (item, label, color) => {
     if (!item) return null
+    // 옷장 보유 옷: 구매 버튼 없이 '내 옷' 배지로 표시
+    if (item.owned) {
+      return (
+        <div className="outfit-card outfit-card-owned">
+          <div className="outfit-image owned-image">
+            <span className="owned-badge">내 옷</span>
+          </div>
+          <div className="outfit-info">
+            <div className="outfit-category">
+              {label}
+              {renderColorChip(color)}
+            </div>
+            <div className="outfit-name">{item.name}</div>
+            <div className="outfit-sub">옷장에 있는 옷</div>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="outfit-card">
         <div className="outfit-image">
@@ -80,15 +108,7 @@ function HomePage({ settings }) {
         <div className="outfit-info">
           <div className="outfit-category">
             {label}
-            {color && COLOR_HEX[color] && (
-              <span className="outfit-color">
-                <span
-                  className="outfit-color-dot"
-                  style={{ background: COLOR_HEX[color] }}
-                />
-                {color}
-              </span>
-            )}
+            {renderColorChip(color)}
           </div>
           <div className="outfit-name">{item.title.replace(/<[^>]+>/g, '')}</div>
           <div className="outfit-sub">{item.mallName} · {parseInt(item.lprice).toLocaleString()}원</div>
