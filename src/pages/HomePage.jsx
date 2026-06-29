@@ -3,6 +3,7 @@ import { fetchWeather } from '../api/weather'
 import { fetchOutfitPresets } from '../api/shop'
 import { getFavorites, toggleFavorite, isFavorite, removeFavorite } from '../api/favorites'
 import { getSolarTerm } from '../api/season'
+import { COLOR_HEX } from '../api/colors'
 import '../styles/HomePage.css'
 
 function HomePage({ settings }) {
@@ -42,7 +43,7 @@ function HomePage({ settings }) {
     if (weather.feel === '--') return
     setLoading(true)
     // 추천은 실제 기온이 아니라 체감온도(feel) 기준 + 강수 여부 반영
-    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain)
+    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain, settings.tone, settings.fit)
       .then((data) => {
         setPresets(data)
         setSelectedPreset(0)
@@ -52,7 +53,7 @@ function HomePage({ settings }) {
         console.error('쇼핑 불러오기 실패:', err)
         setLoading(false)
       })
-  }, [weather.feel, weather.rain, situation, settings.gender])
+  }, [weather.feel, weather.rain, situation, settings.gender, settings.tone, settings.fit])
 
   const preset = presets[selectedPreset]
   const saved = preset ? isFavorite(preset) : false
@@ -66,7 +67,7 @@ function HomePage({ settings }) {
     setFavorites(removeFavorite(id))
   }
 
-  const renderItem = (item, label) => {
+  const renderItem = (item, label, color) => {
     if (!item) return null
     return (
       <div className="outfit-card">
@@ -77,7 +78,18 @@ function HomePage({ settings }) {
           }
         </div>
         <div className="outfit-info">
-          <div className="outfit-category">{label}</div>
+          <div className="outfit-category">
+            {label}
+            {color && COLOR_HEX[color] && (
+              <span className="outfit-color">
+                <span
+                  className="outfit-color-dot"
+                  style={{ background: COLOR_HEX[color] }}
+                />
+                {color}
+              </span>
+            )}
+          </div>
           <div className="outfit-name">{item.title.replace(/<[^>]+>/g, '')}</div>
           <div className="outfit-sub">{item.mallName} · {parseInt(item.lprice).toLocaleString()}원</div>
           <a href={item.link} target="_blank" rel="noreferrer" className="buy-btn">구매하기 →</a>
@@ -149,13 +161,14 @@ function HomePage({ settings }) {
               <div className="outfit-reason">
                 {preset.concept && <span className="outfit-concept">{preset.concept}</span>}
                 {preset.reason}
+                {preset.tip && <div className="outfit-tip">💡 {preset.tip}</div>}
               </div>
             )}
             <div className="outfit-list">
-              {renderItem(preset.top, '상의')}
-              {renderItem(preset.bottom, '하의')}
-              {renderItem(preset.outer, '아우터')}
-              {renderItem(preset.shoes, '신발')}
+              {renderItem(preset.top, '상의', preset.colors?.top)}
+              {renderItem(preset.bottom, '하의', preset.colors?.bottom)}
+              {renderItem(preset.outer, '아우터', preset.colors?.outer)}
+              {renderItem(preset.shoes, '신발', preset.colors?.shoes)}
             </div>
           </>
         ) : null}
