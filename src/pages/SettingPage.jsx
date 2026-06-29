@@ -73,32 +73,28 @@ function SettingPage({ settings, setSettings }) {
 
       <div className="setting-section">
         <div className="setting-label">상의 사이즈</div>
-        <div className="setting-grid">
+        <select
+          className="setting-select"
+          value={settings.topSize}
+          onChange={(e) => update('topSize', e.target.value)}
+        >
           {topSizes.map((s) => (
-            <button
-              key={s}
-              className={`setting-btn ${settings.topSize === s ? 'active' : ''}`}
-              onClick={() => update('topSize', s)}
-            >
-              {s}
-            </button>
+            <option key={s} value={s}>{s}</option>
           ))}
-        </div>
+        </select>
       </div>
 
       <div className="setting-section">
         <div className="setting-label">하의 사이즈</div>
-        <div className="setting-grid">
+        <select
+          className="setting-select"
+          value={settings.bottomSize}
+          onChange={(e) => update('bottomSize', e.target.value)}
+        >
           {bottomSizes.map((s) => (
-            <button
-              key={s}
-              className={`setting-btn ${settings.bottomSize === s ? 'active' : ''}`}
-              onClick={() => update('bottomSize', s)}
-            >
-              {s}
-            </button>
+            <option key={s} value={s}>{s}</option>
           ))}
-        </div>
+        </select>
       </div>
 
       <div className="setting-section">
