@@ -198,6 +198,7 @@ export const fetchOutfitPresets = async (temp, situation, gender, preferredItems
       concept: p.concept || '',
       reason: p.reason || '',
       tip: p.tip || '',
+      colors: p.colors || {},
       top: takeNext(p.top),
       bottom: takeNext(p.bottom),
       outer: takeNext(p.outer),

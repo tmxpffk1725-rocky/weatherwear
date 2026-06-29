@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { COLORS, COLOR_HEX } from '../api/colors'
 import '../styles/ClosetPage.css'
 
 // 카테고리별 종류 프리셋 (설정의 선호 아이템 어휘와 통일)
@@ -8,24 +9,6 @@ const CATEGORY_ITEMS = {
   '신발': ['샌들', '슬리퍼', '스니커즈', '운동화', '로퍼', '구두', '부츠', '어그부츠'],
   '아우터': ['바람막이', '얇은자켓', '가디건', '자켓', '트렌치코트', '코트', '가죽자켓', '패딩'],
 }
-
-// 색상 스와치
-const COLORS = [
-  { name: '블랙', hex: '#111111' },
-  { name: '화이트', hex: '#ffffff' },
-  { name: '그레이', hex: '#9aa0a6' },
-  { name: '네이비', hex: '#2a3b5e' },
-  { name: '베이지', hex: '#d9c6a5' },
-  { name: '브라운', hex: '#6f4e37' },
-  { name: '카키', hex: '#6b6b3a' },
-  { name: '블루', hex: '#3b6fd6' },
-  { name: '그린', hex: '#3a7d44' },
-  { name: '레드', hex: '#c0392b' },
-  { name: '핑크', hex: '#e58fa8' },
-  { name: '옐로우', hex: '#e6c34a' },
-]
-
-const COLOR_HEX = Object.fromEntries(COLORS.map((c) => [c.name, c.hex]))
 
 const EMPTY_ITEM = { name: '', category: '상의', color: '', memo: '' }
 
