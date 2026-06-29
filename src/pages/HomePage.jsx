@@ -42,7 +42,7 @@ function HomePage({ settings }) {
     if (weather.feel === '--') return
     setLoading(true)
     // 추천은 실제 기온이 아니라 체감온도(feel) 기준 + 강수 여부 반영
-    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain)
+    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain, settings.tone, settings.fit)
       .then((data) => {
         setPresets(data)
         setSelectedPreset(0)
@@ -52,7 +52,7 @@ function HomePage({ settings }) {
         console.error('쇼핑 불러오기 실패:', err)
         setLoading(false)
       })
-  }, [weather.feel, weather.rain, situation, settings.gender])
+  }, [weather.feel, weather.rain, situation, settings.gender, settings.tone, settings.fit])
 
   const preset = presets[selectedPreset]
   const saved = preset ? isFavorite(preset) : false
@@ -149,6 +149,7 @@ function HomePage({ settings }) {
               <div className="outfit-reason">
                 {preset.concept && <span className="outfit-concept">{preset.concept}</span>}
                 {preset.reason}
+                {preset.tip && <div className="outfit-tip">💡 {preset.tip}</div>}
               </div>
             )}
             <div className="outfit-list">

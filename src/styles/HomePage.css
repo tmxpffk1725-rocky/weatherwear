@@ -144,6 +144,14 @@
   color: var(--text-sub);
 }
 
+.outfit-tip {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  font-weight: 500;
+}
+
 .outfit-concept {
   display: inline-block;
   margin-right: 8px;

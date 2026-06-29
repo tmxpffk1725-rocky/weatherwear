@@ -149,24 +149,24 @@ const fetchOne = async (query, category) => {
 }
 
 // LLM에게 코디 설계 요청 (실패 시 호출부에서 룰 기반으로 폴백)
-const fetchOutfitPlan = async (feel, rain, situation, gender, preferredItems) => {
+const fetchOutfitPlan = async (feel, rain, situation, gender, preferredItems, tone, fit) => {
   const season = getSolarTerm().season
   const response = await axios.post('/api/outfit', {
-    feel, rain, season, situation, gender, preferred: preferredItems,
+    feel, rain, season, situation, gender, preferred: preferredItems, tone, fit,
   })
   const presets = response.data?.presets
   if (!Array.isArray(presets) || presets.length === 0) throw new Error('empty plan')
   return presets
 }
 
-export const fetchOutfitPresets = async (temp, situation, gender, preferredItems, rain = false) => {
+export const fetchOutfitPresets = async (temp, situation, gender, preferredItems, rain = false, tone = '', fit = '') => {
   cleanHistory()
   const t = parseInt(temp, 10)
 
   // 1) LLM이 코디 설계 → 실패(키 미설정/오류) 시 룰 기반 폴백
   let plan
   try {
-    plan = await fetchOutfitPlan(t, rain, situation, gender, preferredItems)
+    plan = await fetchOutfitPlan(t, rain, situation, gender, preferredItems, tone, fit)
   } catch {
     plan = buildPresetQueries(t, situation, gender, preferredItems, rain)
   }
@@ -197,6 +197,7 @@ export const fetchOutfitPresets = async (temp, situation, gender, preferredItems
       id: i + 1,
       concept: p.concept || '',
       reason: p.reason || '',
+      tip: p.tip || '',
       top: takeNext(p.top),
       bottom: takeNext(p.bottom),
       outer: takeNext(p.outer),
