@@ -15,8 +15,8 @@ const LABEL = {
 }
 
 function SettingPage({ settings, setSettings }) {
-  const topSizes = ['S', 'M', 'L', 'XL', 'XXL']
-  const bottomSizes = ['28', '30', '32', '34', '36']
+  const topSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
+  const bottomSizes = ['24', '26', '28', '30', '32', '34', '36']
   const fits = ['슬림핏', '오버핏', '와이드']
 
   const update = (key, value) => {
@@ -73,32 +73,28 @@ function SettingPage({ settings, setSettings }) {
 
       <div className="setting-section">
         <div className="setting-label">상의 사이즈</div>
-        <div className="setting-grid">
+        <select
+          className="setting-select"
+          value={settings.topSize}
+          onChange={(e) => update('topSize', e.target.value)}
+        >
           {topSizes.map((s) => (
-            <button
-              key={s}
-              className={`setting-btn ${settings.topSize === s ? 'active' : ''}`}
-              onClick={() => update('topSize', s)}
-            >
-              {s}
-            </button>
+            <option key={s} value={s}>{s}</option>
           ))}
-        </div>
+        </select>
       </div>
 
       <div className="setting-section">
         <div className="setting-label">하의 사이즈</div>
-        <div className="setting-grid">
+        <select
+          className="setting-select"
+          value={settings.bottomSize}
+          onChange={(e) => update('bottomSize', e.target.value)}
+        >
           {bottomSizes.map((s) => (
-            <button
-              key={s}
-              className={`setting-btn ${settings.bottomSize === s ? 'active' : ''}`}
-              onClick={() => update('bottomSize', s)}
-            >
-              {s}
-            </button>
+            <option key={s} value={s}>{s}</option>
           ))}
-        </div>
+        </select>
       </div>
 
       <div className="setting-section">
