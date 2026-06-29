@@ -146,15 +146,32 @@ const fetchOne = async (query, category) => {
   return fresh.length > 0 ? fresh : matched
 }
 
+// LLM에게 코디 설계 요청 (실패 시 호출부에서 룰 기반으로 폴백)
+const fetchOutfitPlan = async (feel, rain, situation, gender, preferredItems) => {
+  const season = getSolarTerm().season
+  const response = await axios.post('/api/outfit', {
+    feel, rain, season, situation, gender, preferred: preferredItems,
+  })
+  const presets = response.data?.presets
+  if (!Array.isArray(presets) || presets.length === 0) throw new Error('empty plan')
+  return presets
+}
+
 export const fetchOutfitPresets = async (temp, situation, gender, preferredItems, rain = false) => {
   cleanHistory()
-
   const t = parseInt(temp, 10)
-  const presetQueries = buildPresetQueries(t, situation, gender, preferredItems, rain)
 
-  // 검색어 → 카테고리 매핑 (중복 검색어는 한 번만 호출)
+  // 1) LLM이 코디 설계 → 실패(키 미설정/오류) 시 룰 기반 폴백
+  let plan
+  try {
+    plan = await fetchOutfitPlan(t, rain, situation, gender, preferredItems)
+  } catch {
+    plan = buildPresetQueries(t, situation, gender, preferredItems, rain)
+  }
+
+  // plan 각 항목은 top/bottom/outer/shoes(검색어 문자열) 보유. LLM은 concept/reason도 포함.
   const queryCategory = {}
-  presetQueries.forEach((p) => {
+  plan.forEach((p) => {
     CATEGORIES.forEach((c) => { if (p[c]) queryCategory[p[c]] = c })
   })
   const uniqueQueries = Object.keys(queryCategory)
@@ -173,13 +190,15 @@ export const fetchOutfitPresets = async (temp, situation, gender, preferredItems
     return list[idx] ?? list[list.length - 1]
   }
 
-  return presetQueries.map((queries, i) => {
+  return plan.map((p, i) => {
     const preset = {
       id: i + 1,
-      top: takeNext(queries.top),
-      bottom: takeNext(queries.bottom),
-      outer: takeNext(queries.outer),
-      shoes: takeNext(queries.shoes),
+      concept: p.concept || '',
+      reason: p.reason || '',
+      top: takeNext(p.top),
+      bottom: takeNext(p.bottom),
+      outer: takeNext(p.outer),
+      shoes: takeNext(p.shoes),
     }
     CATEGORIES.forEach((c) => {
       if (preset[c]) addHistory(preset[c].productId)

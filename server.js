@@ -1,9 +1,11 @@
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
+const { generateOutfit } = require('./lib/outfit')
 
 const app = express()
 app.use(cors())
+app.use(express.json())
 
 // API 키는 환경변수에서 읽는다 (.env, gitignore됨 / Vercel은 환경변수 설정)
 const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID
@@ -23,6 +25,15 @@ app.get('/api/shop', async (req, res) => {
     })
     const data = await response.json()
     res.status(response.ok ? 200 : response.status).json(data)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/outfit', async (req, res) => {
+  try {
+    const presets = await generateOutfit(req.body || {})
+    res.json({ presets })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
