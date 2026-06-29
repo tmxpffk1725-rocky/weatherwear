@@ -48,6 +48,20 @@
   font-weight: 600;
 }
 
+.setting-row {
+  display: flex;
+  gap: 12px;
+}
+
+.setting-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-col .setting-label {
+  margin-bottom: 10px;
+}
+
 .setting-select {
   width: 100%;
   padding: 13px 40px 13px 14px;

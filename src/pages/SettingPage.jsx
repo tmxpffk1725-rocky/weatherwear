@@ -72,29 +72,32 @@ function SettingPage({ settings, setSettings }) {
       </div>
 
       <div className="setting-section">
-        <div className="setting-label">상의 사이즈</div>
-        <select
-          className="setting-select"
-          value={settings.topSize}
-          onChange={(e) => update('topSize', e.target.value)}
-        >
-          {topSizes.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="setting-section">
-        <div className="setting-label">하의 사이즈</div>
-        <select
-          className="setting-select"
-          value={settings.bottomSize}
-          onChange={(e) => update('bottomSize', e.target.value)}
-        >
-          {bottomSizes.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+        <div className="setting-row">
+          <div className="setting-col">
+            <div className="setting-label">상의 사이즈</div>
+            <select
+              className="setting-select"
+              value={settings.topSize}
+              onChange={(e) => update('topSize', e.target.value)}
+            >
+              {topSizes.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div className="setting-col">
+            <div className="setting-label">하의 사이즈</div>
+            <select
+              className="setting-select"
+              value={settings.bottomSize}
+              onChange={(e) => update('bottomSize', e.target.value)}
+            >
+              {bottomSizes.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       <div className="setting-section">
