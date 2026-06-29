@@ -15,8 +15,8 @@ const LABEL = {
 }
 
 function SettingPage({ settings, setSettings }) {
-  const topSizes = ['S', 'M', 'L', 'XL', 'XXL']
-  const bottomSizes = ['28', '30', '32', '34', '36']
+  const topSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
+  const bottomSizes = ['24', '26', '28', '30', '32', '34', '36']
   const fits = ['슬림핏', '오버핏', '와이드']
 
   const update = (key, value) => {
