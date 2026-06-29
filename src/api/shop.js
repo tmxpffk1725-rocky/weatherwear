@@ -149,32 +149,44 @@ const fetchOne = async (query, category) => {
 }
 
 // LLM에게 코디 설계 요청 (실패 시 호출부에서 룰 기반으로 폴백)
-const fetchOutfitPlan = async (feel, rain, situation, gender, preferredItems, tone, fit) => {
+const fetchOutfitPlan = async (feel, rain, situation, gender, preferredItems, tone, fit, closet) => {
   const season = getSolarTerm().season
   const response = await axios.post('/api/outfit', {
-    feel, rain, season, situation, gender, preferred: preferredItems, tone, fit,
+    feel, rain, season, situation, gender, preferred: preferredItems, tone, fit, closet,
   })
   const presets = response.data?.presets
   if (!Array.isArray(presets) || presets.length === 0) throw new Error('empty plan')
   return presets
 }
 
-export const fetchOutfitPresets = async (temp, situation, gender, preferredItems, rain = false, tone = '', fit = '') => {
+export const fetchOutfitPresets = async (temp, situation, gender, preferredItems, rain = false, tone = '', fit = '', closet = []) => {
   cleanHistory()
   const t = parseInt(temp, 10)
 
   // 1) LLM이 코디 설계 → 실패(키 미설정/오류) 시 룰 기반 폴백
   let plan
   try {
-    plan = await fetchOutfitPlan(t, rain, situation, gender, preferredItems, tone, fit)
+    plan = await fetchOutfitPlan(t, rain, situation, gender, preferredItems, tone, fit, closet)
   } catch {
     plan = buildPresetQueries(t, situation, gender, preferredItems, rain)
   }
 
+  // 보유 옷 id → 옷장 항목 매핑 (owned 해석용)
+  const closetById = {}
+  closet.forEach((it) => { closetById[it.id] = it })
+  const ownedItem = (p, c) => {
+    const id = p.owned?.[c]
+    return id && closetById[id] ? closetById[id] : null
+  }
+
   // plan 각 항목은 top/bottom/outer/shoes(검색어 문자열) 보유. LLM은 concept/reason도 포함.
+  // 보유 옷으로 채운 카테고리는 네이버 검색을 생략한다.
   const queryCategory = {}
   plan.forEach((p) => {
-    CATEGORIES.forEach((c) => { if (p[c]) queryCategory[p[c]] = c })
+    CATEGORIES.forEach((c) => {
+      if (ownedItem(p, c)) return
+      if (p[c]) queryCategory[p[c]] = c
+    })
   })
   const uniqueQueries = Object.keys(queryCategory)
   const resultMap = {}
@@ -192,20 +204,32 @@ export const fetchOutfitPresets = async (temp, situation, gender, preferredItems
     return list[idx] ?? list[list.length - 1]
   }
 
+  // 카테고리 해석: 보유 옷이면 owned 객체, 아니면 네이버 상품
+  const resolve = (p, c) => {
+    const owned = ownedItem(p, c)
+    if (owned) return { owned: true, name: owned.name, color: owned.color }
+    return takeNext(p[c])
+  }
+
   return plan.map((p, i) => {
+    const colors = { ...(p.colors || {}) }
+    CATEGORIES.forEach((c) => {
+      const owned = ownedItem(p, c)
+      if (owned) colors[c] = owned.color // 보유 옷 색으로 칩 통일
+    })
     const preset = {
       id: i + 1,
       concept: p.concept || '',
       reason: p.reason || '',
       tip: p.tip || '',
-      colors: p.colors || {},
-      top: takeNext(p.top),
-      bottom: takeNext(p.bottom),
-      outer: takeNext(p.outer),
-      shoes: takeNext(p.shoes),
+      colors,
+      top: resolve(p, 'top'),
+      bottom: resolve(p, 'bottom'),
+      outer: resolve(p, 'outer'),
+      shoes: resolve(p, 'shoes'),
     }
     CATEGORIES.forEach((c) => {
-      if (preset[c]) addHistory(preset[c].productId)
+      if (preset[c] && preset[c].productId) addHistory(preset[c].productId)
     })
     return preset
   })
