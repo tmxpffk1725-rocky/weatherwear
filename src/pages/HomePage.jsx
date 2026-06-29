@@ -144,12 +144,20 @@ function HomePage({ settings }) {
         {loading ? (
           <div className="loading">불러오는 중...</div>
         ) : preset ? (
-          <div className="outfit-list">
-            {renderItem(preset.top, '상의')}
-            {renderItem(preset.bottom, '하의')}
-            {renderItem(preset.outer, '아우터')}
-            {renderItem(preset.shoes, '신발')}
-          </div>
+          <>
+            {preset.reason && (
+              <div className="outfit-reason">
+                {preset.concept && <span className="outfit-concept">{preset.concept}</span>}
+                {preset.reason}
+              </div>
+            )}
+            <div className="outfit-list">
+              {renderItem(preset.top, '상의')}
+              {renderItem(preset.bottom, '하의')}
+              {renderItem(preset.outer, '아우터')}
+              {renderItem(preset.shoes, '신발')}
+            </div>
+          </>
         ) : null}
       </div>
 
