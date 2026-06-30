@@ -23,11 +23,12 @@ const req = async (path, { method = 'GET', body, auth = false } = {}) => {
   return data
 }
 
-export const signup = async (email, password, name) => {
-  const { token, email: e, name: n } = await req('/auth/signup', { method: 'POST', body: { email, password, name } })
-  setToken(token)
-  return { email: e, name: n }
-}
+// 가입 → 인증 메일 발송. 자동 로그인 X (이메일 인증 후 로그인). 반환: { message, email }
+export const signup = (email, password, name) =>
+  req('/auth/signup', { method: 'POST', body: { email, password, name } })
+
+// 인증 메일 재전송 (미인증 계정)
+export const resend = (email) => req('/auth/resend', { method: 'POST', body: { email } })
 
 export const login = async (email, password) => {
   const { token, email: e, name: n } = await req('/auth/login', { method: 'POST', body: { email, password } })
