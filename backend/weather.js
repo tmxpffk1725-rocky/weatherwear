@@ -23,8 +23,9 @@ const cache = new Map() // `${nx},${ny},${date},${time}` -> { at, data }
 const TTL = 30 * 60 * 1000
 
 const fetchSlot = async (nx, ny, date, time) => {
+  // numOfRows를 넉넉히 둬서 같은 응답에 들어오는 일 최고/최저(TMX·TMN)까지 포함 (호출 수는 동일)
   const url = `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst`
-    + `?serviceKey=${KMA_KEY}&pageNo=1&numOfRows=100&dataType=JSON`
+    + `?serviceKey=${KMA_KEY}&pageNo=1&numOfRows=300&dataType=JSON`
     + `&base_date=${date}&base_time=${time}&nx=${nx}&ny=${ny}`
   const res = await fetch(url, { signal: AbortSignal.timeout(8000) })
   if (!res.ok) { const e = new Error('upstream ' + res.status); e.status = res.status; throw e }
@@ -36,6 +37,11 @@ const fetchSlot = async (nx, ny, date, time) => {
   const wsd = items.find((i) => i.category === 'WSD')
   const pty = items.find((i) => i.category === 'PTY')
   if (tmp?.fcstValue == null) throw new Error('no temp')
+  // 최고/최저는 하루 한 번만 들어오고, 결측은 -999/-50 등으로 옴 → 유효값만 채택
+  const findValid = (cat) => {
+    const it = items.find((i) => i.category === cat && Number(i.fcstValue) > -900)
+    return it ? Math.round(Number(it.fcstValue)) : null
+  }
   const skyMap = { '1': '맑음', '3': '구름많음', '4': '흐림' }
   const ptyMap = { '1': '비', '2': '비/눈', '3': '눈', '4': '소나기' }
   const ptyVal = pty?.fcstValue
@@ -45,6 +51,10 @@ const fetchSlot = async (nx, ny, date, time) => {
     desc: isRain ? ptyMap[ptyVal] : (skyMap[sky?.fcstValue] ?? '--'),
     feel: Math.round(Number(tmp.fcstValue) - Number(wsd?.fcstValue ?? 0) * 1.5),
     rain: isRain,
+    pop: findValid('POP'),  // 강수확률(%)
+    reh: findValid('REH'),  // 습도(%)
+    tmx: findValid('TMX'),  // 일 최고기온
+    tmn: findValid('TMN'),  // 일 최저기온
   }
 }
 
