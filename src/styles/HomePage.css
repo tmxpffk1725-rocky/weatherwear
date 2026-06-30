@@ -30,6 +30,50 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
+.weather-note {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 16px;
+}
+
+.weather-manual-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.weather-manual-select {
+  flex: 1;
+  padding: 11px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+}
+
+.weather-manual-select option {
+  color: #111;
+}
+
+.weather-retry {
+  margin-left: 10px;
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.weather-manual-row .weather-retry {
+  margin-left: 0;
+}
+
 /* ===== 공통 라벨 ===== */
 .section-label {
   font-size: 12px;

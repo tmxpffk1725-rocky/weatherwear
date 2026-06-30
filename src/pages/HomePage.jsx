@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fetchWeather } from '../api/weather'
+import { fetchWeather, getCachedWeather } from '../api/weather'
 import { fetchOutfitPresets } from '../api/shop'
 import { toggleFavorite, isFavorite, removeFavorite } from '../api/favorites'
 import { getSolarTerm } from '../api/season'
@@ -21,23 +21,35 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
   const [presets, setPresets] = useState([])
   const [selectedPreset, setSelectedPreset] = useState(0)
   const [loading, setLoading] = useState(false)
+  const [weatherMode, setWeatherMode] = useState('loading') // loading|ok|stale|manual
   const solarTerm = getSolarTerm() // 오늘 24절기 (표시 + 추천 시즌 키워드)
 
-  useEffect(() => {
+  // 날씨 불러오기: 실패 시 마지막 캐시 → 그것도 없으면 수동 입력 모드
+  const loadWeather = () => {
+    setWeatherMode('loading')
     fetchWeather()
       .then((data) => {
-        setWeather({
-          location: data.location,
-          temp: data.temp,
-          feel: data.feel,
-          desc: data.desc,
-          rain: data.rain,
-        })
+        setWeather({ location: data.location, temp: data.temp, feel: data.feel, desc: data.desc, rain: data.rain })
+        setWeatherMode('ok')
       })
       .catch((err) => {
         console.error('날씨 불러오기 실패:', err)
+        const cached = getCachedWeather()
+        if (cached) {
+          setWeather({ location: cached.location, temp: cached.temp, feel: cached.feel, desc: cached.desc, rain: cached.rain })
+          setWeatherMode('stale')
+        } else {
+          setWeatherMode('manual')
+        }
       })
-  }, [])
+  }
+
+  useEffect(() => { loadWeather() }, [])
+
+  // 수동 기온 선택 → 그 값으로 추천
+  const applyManual = (feel, rain) => {
+    setWeather({ location: '직접 입력', temp: feel, feel, desc: rain ? '비' : '맑음', rain })
+  }
 
   useEffect(() => {
     if (weather.feel === '--') return
@@ -128,6 +140,36 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
         <div className="weather-location">📍 {weather.location} · {solarTerm.name}</div>
         <div className="weather-temp">{weather.temp}°</div>
         <div className="weather-desc">{weather.desc} · 체감 {weather.feel}°</div>
+
+        {weatherMode === 'stale' && (
+          <div className="weather-note">
+            기상청 응답 지연 — 마지막 날씨예요
+            <button className="weather-retry" onClick={loadWeather}>다시 시도</button>
+          </div>
+        )}
+
+        {weatherMode === 'manual' && (
+          <div className="weather-manual">
+            <div className="weather-note">날씨를 못 불러왔어요. 기온을 직접 고르세요.</div>
+            <div className="weather-manual-row">
+              <select
+                className="weather-manual-select"
+                defaultValue=""
+                onChange={(e) => { if (e.target.value) applyManual(Number(e.target.value), weather.rain) }}
+              >
+                <option value="" disabled>기온 선택</option>
+                <option value="32">한여름 32°</option>
+                <option value="27">더움 27°</option>
+                <option value="22">따뜻 22°</option>
+                <option value="17">선선 17°</option>
+                <option value="10">쌀쌀 10°</option>
+                <option value="3">추움 3°</option>
+                <option value="-5">한겨울 -5°</option>
+              </select>
+              <button className="weather-retry" onClick={loadWeather}>다시 시도</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="situation-section">
