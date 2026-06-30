@@ -71,7 +71,7 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
     setLoading(true)
     // 추천은 실제 기온이 아니라 체감온도(feel) 기준 + 강수 여부 반영
     // 옷장은 탭 전환 시 HomePage가 재마운트되므로 호출 시점에 최신을 읽는다
-    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain, settings.tone, settings.fit, closetForAI(closet))
+    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain, settings.tone, settings.fit, closetForAI(closet), { min: weather.tmn, max: weather.tmx, pop: weather.pop })
       .then((data) => {
         setPresets(data)
         setSelectedPreset(0)
