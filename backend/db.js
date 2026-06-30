@@ -25,7 +25,9 @@ db.exec(`
   );
 `)
 
-// 기존 DB에 name 컬럼이 없으면 추가 (있으면 무시)
+// 기존 DB에 누락 컬럼 추가 (있으면 무시)
 try { db.exec('ALTER TABLE users ADD COLUMN name TEXT') } catch { /* 이미 존재 */ }
+try { db.exec('ALTER TABLE users ADD COLUMN verified INTEGER NOT NULL DEFAULT 0') } catch { /* 이미 존재 */ }
+try { db.exec('ALTER TABLE users ADD COLUMN verify_token TEXT') } catch { /* 이미 존재 */ }
 
 module.exports = db

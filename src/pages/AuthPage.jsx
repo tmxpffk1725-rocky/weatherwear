@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { login, signup } from '../api/backend'
+import { login, signup, resend } from '../api/backend'
 import '../styles/AuthPage.css'
 
 const TShirtIcon = () => (
@@ -18,6 +18,13 @@ const EyeIcon = ({ off }) => (
   </svg>
 )
 
+const Brand = () => (
+  <div className="auth-brand">
+    <span className="auth-logo-tile"><TShirtIcon /></span>
+    <span className="auth-wordmark">WeatherWear</span>
+  </div>
+)
+
 function AuthPage({ onAuth }) {
   const [mode, setMode] = useState('login') // 'login' | 'signup'
   const [email, setEmail] = useState('')
@@ -27,20 +34,30 @@ function AuthPage({ onAuth }) {
   const [showPw, setShowPw] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
+  const [sent, setSent] = useState('') // 가입 후 인증 메일 보낸 이메일
 
   const isLogin = mode === 'login'
 
   const switchMode = () => {
     setMode(isLogin ? 'signup' : 'login')
-    setError('')
-    setConfirm('')
-    setName('')
+    setError(''); setNotice(''); setConfirm(''); setName('')
+  }
+
+  const doResend = async (target) => {
+    setNotice(''); setError('')
+    try {
+      await resend(target)
+      setNotice('인증 메일을 다시 보냈어요. 메일함을 확인하세요.')
+    } catch {
+      setNotice('재전송에 실패했어요. 잠시 후 다시 시도하세요.')
+    }
   }
 
   const submit = async (e) => {
     e.preventDefault()
-    setError('')
+    setError(''); setNotice('')
     if (!isLogin) {
       if (password.length < 6) { setError('비밀번호는 6자 이상이어야 합니다.'); return }
       if (password !== confirm) { setError('비밀번호가 일치하지 않습니다.'); return }
@@ -48,23 +65,48 @@ function AuthPage({ onAuth }) {
     }
     setLoading(true)
     try {
-      const info = isLogin
-        ? await login(email.trim(), password)
-        : await signup(email.trim(), password, name.trim())
-      onAuth(info)
+      if (isLogin) {
+        const info = await login(email.trim(), password)
+        onAuth(info)
+      } else {
+        await signup(email.trim(), password, name.trim())
+        setSent(email.trim())
+        setLoading(false)
+      }
     } catch (err) {
       setError(err.message || '오류가 발생했습니다.')
       setLoading(false)
     }
   }
 
+  // 가입 후: 메일 확인 안내 화면
+  if (sent) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card">
+          <Brand />
+          <div className="auth-head">
+            <div className="auth-title">메일을 확인하세요</div>
+            <div className="auth-sub">{sent}로 인증 메일을 보냈어요.<br />링크를 클릭한 뒤 로그인하세요.</div>
+          </div>
+          <button className="auth-submit" onClick={() => { setSent(''); setMode('login'); setPassword(''); setError(''); setNotice('') }}>
+            로그인하러 가기
+          </button>
+          {notice && <div className="auth-notice">{notice}</div>}
+          <div className="auth-switch">
+            메일을 못 받으셨나요? <button className="auth-switch-btn" onClick={() => doResend(sent)}>재전송</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const showResend = isLogin && error.includes('인증')
+
   return (
     <div className="auth-page">
       <div className="auth-card">
-        <div className="auth-brand">
-          <span className="auth-logo-tile"><TShirtIcon /></span>
-          <span className="auth-wordmark">WeatherWear</span>
-        </div>
+        <Brand />
 
         <div className="auth-head">
           <div className="auth-title">{isLogin ? '로그인' : '회원가입'}</div>
@@ -76,33 +118,19 @@ function AuthPage({ onAuth }) {
         <form className="auth-form" onSubmit={submit}>
           <div className="auth-field">
             <label className="auth-label">이메일</label>
-            <input
-              type="email"
-              className="auth-input"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
+            <input type="email" className="auth-input" placeholder="you@example.com"
+              value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
           </div>
 
           <div className="auth-field">
             <label className="auth-label">비밀번호</label>
             <div className="auth-pw">
-              <input
-                type={showPw ? 'text' : 'password'}
-                className="auth-input"
-                placeholder={isLogin ? '비밀번호' : '6자 이상'}
-                value={password}
+              <input type={showPw ? 'text' : 'password'} className="auth-input"
+                placeholder={isLogin ? '비밀번호' : '6자 이상'} value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete={isLogin ? 'current-password' : 'new-password'}
-                required
-              />
+                autoComplete={isLogin ? 'current-password' : 'new-password'} required />
               <button type="button" className="auth-eye" onClick={() => setShowPw(!showPw)}
-                aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 표시'}>
-                <EyeIcon off={showPw} />
-              </button>
+                aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 표시'}><EyeIcon off={showPw} /></button>
             </div>
             {!isLogin && <div className="auth-helper">6자 이상 입력하세요</div>}
           </div>
@@ -111,19 +139,11 @@ function AuthPage({ onAuth }) {
             <div className="auth-field">
               <label className="auth-label">비밀번호 확인</label>
               <div className="auth-pw">
-                <input
-                  type={showConfirm ? 'text' : 'password'}
-                  className="auth-input"
-                  placeholder="비밀번호 다시 입력"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  autoComplete="new-password"
-                  required
-                />
+                <input type={showConfirm ? 'text' : 'password'} className="auth-input"
+                  placeholder="비밀번호 다시 입력" value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required />
                 <button type="button" className="auth-eye" onClick={() => setShowConfirm(!showConfirm)}
-                  aria-label={showConfirm ? '비밀번호 숨기기' : '비밀번호 표시'}>
-                  <EyeIcon off={showConfirm} />
-                </button>
+                  aria-label={showConfirm ? '비밀번호 숨기기' : '비밀번호 표시'}><EyeIcon off={showConfirm} /></button>
               </div>
             </div>
           )}
@@ -131,19 +151,18 @@ function AuthPage({ onAuth }) {
           {!isLogin && (
             <div className="auth-field">
               <label className="auth-label">이름</label>
-              <input
-                type="text"
-                className="auth-input"
-                placeholder="예: 홍길동"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="name"
-                required
-              />
+              <input type="text" className="auth-input" placeholder="예: 홍길동"
+                value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
             </div>
           )}
 
           {error && <div className="auth-error">{error}</div>}
+          {showResend && (
+            <button type="button" className="auth-resend" onClick={() => doResend(email.trim())}>
+              인증 메일 재전송
+            </button>
+          )}
+          {notice && <div className="auth-notice">{notice}</div>}
 
           <button className="auth-submit" type="submit" disabled={loading}>
             {loading ? '처리 중...' : isLogin ? '로그인' : '회원가입'}

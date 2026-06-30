@@ -125,6 +125,27 @@
   margin-bottom: 12px;
 }
 
+.auth-notice {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.auth-resend {
+  display: block;
+  width: 100%;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 11px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+
 .auth-submit {
   width: 100%;
   height: 48px;
