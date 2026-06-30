@@ -14,7 +14,7 @@ const LABEL = {
   shoes: '신발',
 }
 
-function SettingPage({ settings, setSettings, email, onLogout }) {
+function SettingPage({ settings, setSettings, email, name, onLogout }) {
   const topSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
   const bottomSizes = ['24', '26', '28', '30', '32', '34', '36']
   const fits = ['슬림핏', '오버핏', '와이드']
@@ -134,6 +134,7 @@ function SettingPage({ settings, setSettings, email, onLogout }) {
 
       <div className="setting-section">
         <div className="setting-label">계정</div>
+        {name && <div className="account-name">{name}</div>}
         <div className="account-email">{email}</div>
         <button className="logout-btn" onClick={onLogout}>로그아웃</button>
       </div>

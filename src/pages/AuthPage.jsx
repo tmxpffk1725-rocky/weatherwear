@@ -22,20 +22,36 @@ function AuthPage({ onAuth }) {
   const [mode, setMode] = useState('login') // 'login' | 'signup'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [name, setName] = useState('')
   const [showPw, setShowPw] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const isLogin = mode === 'login'
 
+  const switchMode = () => {
+    setMode(isLogin ? 'signup' : 'login')
+    setError('')
+    setConfirm('')
+    setName('')
+  }
+
   const submit = async (e) => {
     e.preventDefault()
     setError('')
+    if (!isLogin) {
+      if (password.length < 6) { setError('비밀번호는 6자 이상이어야 합니다.'); return }
+      if (password !== confirm) { setError('비밀번호가 일치하지 않습니다.'); return }
+      if (!name.trim()) { setError('이름을 입력하세요.'); return }
+    }
     setLoading(true)
     try {
-      const fn = isLogin ? login : signup
-      const userEmail = await fn(email.trim(), password)
-      onAuth(userEmail)
+      const info = isLogin
+        ? await login(email.trim(), password)
+        : await signup(email.trim(), password, name.trim())
+      onAuth(info)
     } catch (err) {
       setError(err.message || '오류가 발생했습니다.')
       setLoading(false)
@@ -58,38 +74,74 @@ function AuthPage({ onAuth }) {
         </div>
 
         <form className="auth-form" onSubmit={submit}>
-          <label className="auth-label">이메일</label>
-          <input
-            type="email"
-            className="auth-input"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-          />
-
-          <label className="auth-label">비밀번호</label>
-          <div className="auth-pw">
+          <div className="auth-field">
+            <label className="auth-label">이메일</label>
             <input
-              type={showPw ? 'text' : 'password'}
+              type="email"
               className="auth-input"
-              placeholder={isLogin ? '비밀번호' : '6자 이상'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
             />
-            <button
-              type="button"
-              className="auth-eye"
-              onClick={() => setShowPw(!showPw)}
-              aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 표시'}
-            >
-              <EyeIcon off={showPw} />
-            </button>
           </div>
-          {!isLogin && <div className="auth-helper">6자 이상 입력하세요</div>}
+
+          <div className="auth-field">
+            <label className="auth-label">비밀번호</label>
+            <div className="auth-pw">
+              <input
+                type={showPw ? 'text' : 'password'}
+                className="auth-input"
+                placeholder={isLogin ? '비밀번호' : '6자 이상'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
+                required
+              />
+              <button type="button" className="auth-eye" onClick={() => setShowPw(!showPw)}
+                aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 표시'}>
+                <EyeIcon off={showPw} />
+              </button>
+            </div>
+            {!isLogin && <div className="auth-helper">6자 이상 입력하세요</div>}
+          </div>
+
+          {!isLogin && (
+            <div className="auth-field">
+              <label className="auth-label">비밀번호 확인</label>
+              <div className="auth-pw">
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  className="auth-input"
+                  placeholder="비밀번호 다시 입력"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  autoComplete="new-password"
+                  required
+                />
+                <button type="button" className="auth-eye" onClick={() => setShowConfirm(!showConfirm)}
+                  aria-label={showConfirm ? '비밀번호 숨기기' : '비밀번호 표시'}>
+                  <EyeIcon off={showConfirm} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!isLogin && (
+            <div className="auth-field">
+              <label className="auth-label">이름</label>
+              <input
+                type="text"
+                className="auth-input"
+                placeholder="예: 홍길동"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+                required
+              />
+            </div>
+          )}
 
           {error && <div className="auth-error">{error}</div>}
 
@@ -100,10 +152,7 @@ function AuthPage({ onAuth }) {
 
         <div className="auth-switch">
           {isLogin ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
-          <button
-            className="auth-switch-btn"
-            onClick={() => { setMode(isLogin ? 'signup' : 'login'); setError('') }}
-          >
+          <button className="auth-switch-btn" onClick={switchMode}>
             {isLogin ? '회원가입' : '로그인'}
           </button>
         </div>

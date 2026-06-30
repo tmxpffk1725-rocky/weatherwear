@@ -25,6 +25,7 @@ function App() {
   const [authed, setAuthed] = useState(false)
   const [authLoading, setAuthLoading] = useState(true)
   const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
   const [currentPage, setCurrentPage] = useState('home')
 
   const [settings, setSettingsState] = useState(DEFAULT_SETTINGS)
@@ -42,13 +43,14 @@ function App() {
   useEffect(() => {
     if (!getToken()) { setAuthLoading(false); return }
     me()
-      .then(async (e) => { setEmail(e); await loadState(); setAuthed(true) })
+      .then(async (info) => { setEmail(info.email); setName(info.name); await loadState(); setAuthed(true) })
       .catch(() => clearToken())
       .finally(() => setAuthLoading(false))
   }, [])
 
-  const handleAuth = async (e) => {
-    setEmail(e)
+  const handleAuth = async (info) => {
+    setEmail(info.email)
+    setName(info.name)
     try { await loadState() } catch { /* 신규 계정은 빈 상태 */ }
     setAuthed(true)
   }
@@ -57,6 +59,7 @@ function App() {
     clearToken()
     setAuthed(false)
     setEmail('')
+    setName('')
     setSettingsState(DEFAULT_SETTINGS)
     setClosetState([])
     setFavoritesState([])
@@ -77,7 +80,7 @@ function App() {
     }
     if (currentPage === 'closet') return <ClosetPage closet={closet} setCloset={setCloset} />
     if (currentPage === 'setting') {
-      return <SettingPage settings={settings} setSettings={setSettings} email={email} onLogout={logout} />
+      return <SettingPage settings={settings} setSettings={setSettings} email={email} name={name} onLogout={logout} />
     }
   }
 

@@ -22,7 +22,7 @@ app.use(express.json({ limit: '1mb' }))
 app.use(cors({ origin: ORIGINS }))
 
 // --- 인증 ---
-const signToken = (user) => jwt.sign({ uid: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' })
+const signToken = (user) => jwt.sign({ uid: user.id, email: user.email, name: user.name || '' }, JWT_SECRET, { expiresIn: '30d' })
 
 const authRequired = (req, res, next) => {
   const h = req.headers.authorization || ''
@@ -44,17 +44,19 @@ const validEmail = (e) => typeof e === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.
 app.post('/auth/signup', authLimiter, (req, res) => {
   const email = (req.body?.email || '').trim().toLowerCase()
   const password = req.body?.password || ''
+  const name = (req.body?.name || '').trim()
   if (!validEmail(email)) return res.status(400).json({ error: '이메일 형식이 올바르지 않습니다.' })
   if (password.length < 6) return res.status(400).json({ error: '비밀번호는 6자 이상이어야 합니다.' })
+  if (!name) return res.status(400).json({ error: '이름을 입력하세요.' })
   const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
   if (exists) return res.status(409).json({ error: '이미 가입된 이메일입니다.' })
 
   const hash = bcrypt.hashSync(password, 10)
   const now = Date.now()
-  const info = db.prepare('INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)').run(email, hash, now)
-  const user = { id: info.lastInsertRowid, email }
+  const info = db.prepare('INSERT INTO users (email, password_hash, name, created_at) VALUES (?, ?, ?, ?)').run(email, hash, name, now)
+  const user = { id: info.lastInsertRowid, email, name }
   db.prepare('INSERT INTO user_data (user_id, settings, closet, favorites, updated_at) VALUES (?, NULL, NULL, NULL, ?)').run(user.id, now)
-  res.json({ token: signToken(user), email })
+  res.json({ token: signToken(user), email, name })
 })
 
 app.post('/auth/login', authLimiter, (req, res) => {
@@ -64,11 +66,11 @@ app.post('/auth/login', authLimiter, (req, res) => {
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return res.status(401).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' })
   }
-  res.json({ token: signToken(user), email: user.email })
+  res.json({ token: signToken(user), email: user.email, name: user.name || '' })
 })
 
 app.get('/auth/me', authRequired, (req, res) => {
-  res.json({ email: req.user.email })
+  res.json({ email: req.user.email, name: req.user.name || '' })
 })
 
 // --- 데이터 동기화 (계정별 설정·옷장·찜) ---
