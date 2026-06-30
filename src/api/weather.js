@@ -76,7 +76,12 @@ export const fetchWeather = async () => {
   let lastErr
   for (const slot of baseSlots()) {
     try { core = await requestForecast(nx, ny, slot.date, slot.time); break }
-    catch (e) { lastErr = e }
+    catch (e) {
+      lastErr = e
+      // HTTP 에러(429 한도초과·5xx 서버오류 등)는 다른 슬롯도 같게 실패 →
+      // 즉시 중단해 호출 한도(쿼터) 낭비를 막는다. 200인데 데이터 없음(미발표)일 때만 다음 슬롯 시도.
+      if (e.response) break
+    }
   }
   if (!core) throw lastErr || new Error('weather failed')
   const location = await reverseGeocode(lat, lon)
