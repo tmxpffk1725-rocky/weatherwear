@@ -7,13 +7,28 @@ import { COLOR_HEX } from '../api/colors'
 import { closetForAI } from '../api/closet'
 import '../styles/HomePage.css'
 
+// desc → 큰 날씨 이모지 (카드 오른쪽 장식용)
+const weatherIcon = (desc) => ({
+  '맑음': '☀️',
+  '구름많음': '⛅',
+  '흐림': '☁️',
+  '비': '🌧️',
+  '비/눈': '🌨️',
+  '눈': '❄️',
+  '소나기': '🌦️',
+}[desc] ?? '🌤️')
+
 function HomePage({ settings, closet, favorites, setFavorites }) {
   const [weather, setWeather] = useState({
     location: '현재 위치',
     temp: '--',
     feel: '--',
     desc: '--',
-    rain: false
+    rain: false,
+    pop: null,
+    reh: null,
+    tmx: null,
+    tmn: null
   })
 
   const [situation, setSituation] = useState('출근')
@@ -29,14 +44,14 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
     setWeatherMode('loading')
     fetchWeather()
       .then((data) => {
-        setWeather({ location: data.location, temp: data.temp, feel: data.feel, desc: data.desc, rain: data.rain })
+        setWeather({ location: data.location, temp: data.temp, feel: data.feel, desc: data.desc, rain: data.rain, pop: data.pop, reh: data.reh, tmx: data.tmx, tmn: data.tmn })
         setWeatherMode('ok')
       })
       .catch((err) => {
         console.error('날씨 불러오기 실패:', err)
         const cached = getCachedWeather()
         if (cached) {
-          setWeather({ location: cached.location, temp: cached.temp, feel: cached.feel, desc: cached.desc, rain: cached.rain })
+          setWeather({ location: cached.location, temp: cached.temp, feel: cached.feel, desc: cached.desc, rain: cached.rain, pop: cached.pop, reh: cached.reh, tmx: cached.tmx, tmn: cached.tmn })
           setWeatherMode('stale')
         } else {
           setWeatherMode('manual')
@@ -48,7 +63,7 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
 
   // 수동 기온 선택 → 그 값으로 추천
   const applyManual = (feel, rain) => {
-    setWeather({ location: '직접 입력', temp: feel, feel, desc: rain ? '비' : '맑음', rain })
+    setWeather({ location: '직접 입력', temp: feel, feel, desc: rain ? '비' : '맑음', rain, pop: null, reh: null, tmx: null, tmn: null })
   }
 
   useEffect(() => {
@@ -137,9 +152,39 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
   return (
     <div className="home-page">
       <div className="weather-card">
-        <div className="weather-location">📍 {weather.location} · {solarTerm.name}</div>
-        <div className="weather-temp">{weather.temp}°</div>
-        <div className="weather-desc">{weather.desc} · 체감 {weather.feel}°</div>
+        <div className="weather-card-top">
+          <div className="weather-main">
+            <div className="weather-location">📍 {weather.location} · {solarTerm.name}</div>
+            <div className="weather-temp">{weather.temp}°</div>
+            <div className="weather-desc">{weather.desc} · 체감 {weather.feel}°</div>
+          </div>
+
+          {(weatherMode === 'ok' || weatherMode === 'stale') && (
+            <div className="weather-side">
+              <div className="weather-icon">{weatherIcon(weather.desc)}</div>
+              <div className="weather-chips">
+                {(weather.tmx != null || weather.tmn != null) && (
+                  <div className="weather-chip">
+                    <span className="chip-label">최고 / 최저</span>
+                    <span className="chip-value">{weather.tmx ?? '–'}° / {weather.tmn ?? '–'}°</span>
+                  </div>
+                )}
+                {weather.pop != null && (
+                  <div className="weather-chip">
+                    <span className="chip-label">강수확률</span>
+                    <span className="chip-value">{weather.pop}%</span>
+                  </div>
+                )}
+                {weather.reh != null && (
+                  <div className="weather-chip">
+                    <span className="chip-label">습도</span>
+                    <span className="chip-value">{weather.reh}%</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {weatherMode === 'stale' && (
           <div className="weather-note">
