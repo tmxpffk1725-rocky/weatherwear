@@ -4,6 +4,35 @@ import { getSolarTerm } from './season'
 
 const CATEGORIES = ['top', 'bottom', 'outer', 'shoes']
 
+// 추천 결과 캐시: 같은 조건(체감온도·상황·설정·옷장 등)이면 LLM/네이버 재호출 없이
+// 즉시 반환한다. 탭 복귀·상황 재선택·앱 재방문 때 ~7초 대기를 제거. (localStorage, 30분 TTL)
+const CACHE_KEY = 'outfit_cache'
+const CACHE_TTL = 30 * 60 * 1000
+const CACHE_MAX = 12
+
+const cacheRead = (key) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}')
+    const hit = all[key]
+    if (hit && Date.now() - hit.at < CACHE_TTL) return hit.presets
+  } catch { /* 캐시 깨졌으면 무시 */ }
+  return null
+}
+
+const cacheWrite = (key, presets) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}')
+    all[key] = { at: Date.now(), presets }
+    // TTL 지난 항목 제거 + 최신순 CACHE_MAX개만 유지
+    const now = Date.now()
+    const fresh = Object.entries(all)
+      .filter(([, v]) => now - v.at < CACHE_TTL)
+      .sort((a, b) => b[1].at - a[1].at)
+      .slice(0, CACHE_MAX)
+    localStorage.setItem(CACHE_KEY, JSON.stringify(Object.fromEntries(fresh)))
+  } catch { /* 용량 초과 등은 무시 */ }
+}
+
 const situationMap = {
   '출근': '오피스',
   '데이트': '데이트',
@@ -162,6 +191,12 @@ const fetchOutfitPlan = async (feel, rain, situation, gender, preferredItems, to
 export const fetchOutfitPresets = async (temp, situation, gender, preferredItems, rain = false, tone = '', fit = '', closet = []) => {
   cleanHistory()
   const t = parseInt(temp, 10)
+  const season = getSolarTerm().season
+
+  // 0) 동일 조건 캐시 적중 시 즉시 반환 (LLM/네이버 재호출 생략)
+  const cacheKey = JSON.stringify({ t, rain, situation, gender, tone, fit, season, preferredItems, closet })
+  const cached = cacheRead(cacheKey)
+  if (cached) return cached
 
   // 1) LLM이 코디 설계 → 실패(키 미설정/오류) 시 룰 기반 폴백
   let plan
@@ -211,7 +246,7 @@ export const fetchOutfitPresets = async (temp, situation, gender, preferredItems
     return takeNext(p[c])
   }
 
-  return plan.map((p, i) => {
+  const presets = plan.map((p, i) => {
     const colors = { ...(p.colors || {}) }
     CATEGORIES.forEach((c) => {
       const owned = ownedItem(p, c)
@@ -233,4 +268,7 @@ export const fetchOutfitPresets = async (temp, situation, gender, preferredItems
     })
     return preset
   })
+
+  cacheWrite(cacheKey, presets)
+  return presets
 }
