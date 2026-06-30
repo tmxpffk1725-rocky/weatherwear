@@ -48,9 +48,16 @@
   font-weight: 600;
 }
 
+.account-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
 .account-email {
   font-size: 14px;
-  color: var(--text);
+  color: var(--text-sub);
   margin-bottom: 12px;
 }
 

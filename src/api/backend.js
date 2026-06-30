@@ -23,20 +23,20 @@ const req = async (path, { method = 'GET', body, auth = false } = {}) => {
   return data
 }
 
-export const signup = async (email, password) => {
-  const { token, email: e } = await req('/auth/signup', { method: 'POST', body: { email, password } })
+export const signup = async (email, password, name) => {
+  const { token, email: e, name: n } = await req('/auth/signup', { method: 'POST', body: { email, password, name } })
   setToken(token)
-  return e
+  return { email: e, name: n }
 }
 
 export const login = async (email, password) => {
-  const { token, email: e } = await req('/auth/login', { method: 'POST', body: { email, password } })
+  const { token, email: e, name: n } = await req('/auth/login', { method: 'POST', body: { email, password } })
   setToken(token)
-  return e
+  return { email: e, name: n }
 }
 
-// 토큰 유효성 확인 → 이메일 반환(실패 시 throw)
-export const me = () => req('/auth/me', { auth: true }).then((d) => d.email)
+// 토큰 유효성 확인 → {email, name} 반환(실패 시 throw)
+export const me = () => req('/auth/me', { auth: true })
 
 // 계정 데이터 전체 로드 {settings, closet, favorites}
 export const fetchState = () => req('/api/state', { auth: true })
