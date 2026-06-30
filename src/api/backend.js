@@ -42,6 +42,9 @@ export const me = () => req('/auth/me', { auth: true })
 // 계정 데이터 전체 로드 {settings, closet, favorites}
 export const fetchState = () => req('/api/state', { auth: true })
 
+// 날씨(서버 프록시 + 캐시). {temp, feel, desc, rain} 반환
+export const getWeather = (nx, ny) => req(`/api/weather?nx=${nx}&ny=${ny}`, { auth: true })
+
 export const saveSettings = (value) => req('/api/settings', { method: 'PUT', auth: true, body: { value } })
 export const saveCloset = (value) => req('/api/closet', { method: 'PUT', auth: true, body: { value } })
 export const saveFavorites = (value) => req('/api/favorites', { method: 'PUT', auth: true, body: { value } })

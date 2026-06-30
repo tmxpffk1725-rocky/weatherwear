@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken')
 const rateLimit = require('express-rate-limit')
 const db = require('./db')
 const { sendVerifyEmail } = require('./mailer')
+const { getWeather } = require('./weather')
 
 const APP_URL = process.env.APP_URL || 'https://weatherwear-jade.vercel.app'
 
@@ -142,6 +143,19 @@ const saveField = (field) => (req, res) => {
 app.put('/api/settings', authRequired, saveField('settings'))
 app.put('/api/closet', authRequired, saveField('closet'))
 app.put('/api/favorites', authRequired, saveField('favorites'))
+
+// 날씨 프록시 (격자별 서버 캐시). 로그인 사용자만.
+app.get('/api/weather', authRequired, async (req, res) => {
+  const nx = parseInt(req.query.nx, 10)
+  const ny = parseInt(req.query.ny, 10)
+  if (!Number.isFinite(nx) || !Number.isFinite(ny)) return res.status(400).json({ error: '좌표가 필요합니다.' })
+  try {
+    res.json(await getWeather(nx, ny))
+  } catch (e) {
+    console.error('날씨 프록시 실패:', e.message)
+    res.status(502).json({ error: '날씨를 불러오지 못했습니다.' })
+  }
+})
 
 app.get('/health', (req, res) => res.json({ ok: true }))
 
