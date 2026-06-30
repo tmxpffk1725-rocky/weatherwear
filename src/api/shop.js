@@ -178,30 +178,32 @@ const fetchOne = async (query, category) => {
 }
 
 // LLM에게 코디 설계 요청 (실패 시 호출부에서 룰 기반으로 폴백)
-const fetchOutfitPlan = async (feel, rain, situation, gender, preferredItems, tone, fit, closet) => {
+const fetchOutfitPlan = async (feel, rain, situation, gender, preferredItems, tone, fit, closet, day) => {
   const season = getSolarTerm().season
   const response = await axios.post('/api/outfit', {
     feel, rain, season, situation, gender, preferred: preferredItems, tone, fit, closet,
+    // 하루 범위(일 최저/최고기온, 강수확률) — 하루종일 입을 한 벌 설계용
+    dayMin: day?.min ?? null, dayMax: day?.max ?? null, rainProb: day?.pop ?? null,
   })
   const presets = response.data?.presets
   if (!Array.isArray(presets) || presets.length === 0) throw new Error('empty plan')
   return presets
 }
 
-export const fetchOutfitPresets = async (temp, situation, gender, preferredItems, rain = false, tone = '', fit = '', closet = []) => {
+export const fetchOutfitPresets = async (temp, situation, gender, preferredItems, rain = false, tone = '', fit = '', closet = [], day = {}) => {
   cleanHistory()
   const t = parseInt(temp, 10)
   const season = getSolarTerm().season
 
   // 0) 동일 조건 캐시 적중 시 즉시 반환 (LLM/네이버 재호출 생략)
-  const cacheKey = JSON.stringify({ t, rain, situation, gender, tone, fit, season, preferredItems, closet })
+  const cacheKey = JSON.stringify({ t, rain, situation, gender, tone, fit, season, preferredItems, closet, day })
   const cached = cacheRead(cacheKey)
   if (cached) return cached
 
   // 1) LLM이 코디 설계 → 실패(키 미설정/오류) 시 룰 기반 폴백
   let plan
   try {
-    plan = await fetchOutfitPlan(t, rain, situation, gender, preferredItems, tone, fit, closet)
+    plan = await fetchOutfitPlan(t, rain, situation, gender, preferredItems, tone, fit, closet, day)
   } catch {
     plan = buildPresetQueries(t, situation, gender, preferredItems, rain)
   }
