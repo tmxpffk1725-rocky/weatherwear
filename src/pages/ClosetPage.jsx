@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { COLORS, COLOR_HEX } from '../api/colors'
 import '../styles/ClosetPage.css'
 
@@ -12,29 +12,20 @@ const CATEGORY_ITEMS = {
 
 const EMPTY_ITEM = { name: '', category: '상의', color: '', memo: '' }
 
-function ClosetPage() {
+function ClosetPage({ closet, setCloset }) {
   const [selectedCategory, setSelectedCategory] = useState('전체')
   const categories = ['전체', '상의', '하의', '신발', '아우터']
-
-  const [items, setItems] = useState(() => {
-    const saved = localStorage.getItem('closet_items')
-    return saved ? JSON.parse(saved) : []
-  })
 
   const [showModal, setShowModal] = useState(false)
   const [newItem, setNewItem] = useState(EMPTY_ITEM)
   const [custom, setCustom] = useState(false) // 종류 '직접 입력' 모드
 
-  useEffect(() => {
-    localStorage.setItem('closet_items', JSON.stringify(items))
-  }, [items])
-
   const filtered = selectedCategory === '전체'
-    ? items
-    : items.filter((item) => item.category === selectedCategory)
+    ? closet
+    : closet.filter((item) => item.category === selectedCategory)
 
   const deleteItem = (id) => {
-    setItems(items.filter((item) => item.id !== id))
+    setCloset(closet.filter((item) => item.id !== id))
   }
 
   // 카테고리를 바꾸면 종류 선택은 초기화(목록이 달라지므로)
@@ -51,7 +42,7 @@ function ClosetPage() {
 
   const addItem = () => {
     if (!newItem.name.trim() || !newItem.color) return
-    setItems([...items, { ...newItem, name: newItem.name.trim(), id: Date.now() }])
+    setCloset([...closet, { ...newItem, name: newItem.name.trim(), id: Date.now() }])
     setCustom(false)
     setNewItem(EMPTY_ITEM)
     setShowModal(false)

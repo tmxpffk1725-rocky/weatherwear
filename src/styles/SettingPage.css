@@ -48,6 +48,24 @@
   font-weight: 600;
 }
 
+.account-email {
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: #c0392b;
+  cursor: pointer;
+}
+
 .setting-row {
   display: flex;
   gap: 12px;
