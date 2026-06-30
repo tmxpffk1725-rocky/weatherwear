@@ -47,7 +47,7 @@ app.post('/auth/signup', authLimiter, (req, res) => {
   const name = (req.body?.name || '').trim()
   if (!validEmail(email)) return res.status(400).json({ error: '이메일 형식이 올바르지 않습니다.' })
   if (password.length < 6) return res.status(400).json({ error: '비밀번호는 6자 이상이어야 합니다.' })
-  if (!name) return res.status(400).json({ error: '이름을 입력하세요.' })
+  // 이름은 프론트에서 필수 검증. 백엔드는 구버전 프론트 호환을 위해 비어 있어도 허용.
   const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
   if (exists) return res.status(409).json({ error: '이미 가입된 이메일입니다.' })
 
