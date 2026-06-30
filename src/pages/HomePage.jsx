@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { fetchWeather } from '../api/weather'
 import { fetchOutfitPresets } from '../api/shop'
-import { getFavorites, toggleFavorite, isFavorite, removeFavorite } from '../api/favorites'
+import { toggleFavorite, isFavorite, removeFavorite } from '../api/favorites'
 import { getSolarTerm } from '../api/season'
 import { COLOR_HEX } from '../api/colors'
-import { getClosetForAI } from '../api/closet'
+import { closetForAI } from '../api/closet'
 import '../styles/HomePage.css'
 
-function HomePage({ settings }) {
+function HomePage({ settings, closet, favorites, setFavorites }) {
   const [weather, setWeather] = useState({
     location: '현재 위치',
     temp: '--',
@@ -21,7 +21,6 @@ function HomePage({ settings }) {
   const [presets, setPresets] = useState([])
   const [selectedPreset, setSelectedPreset] = useState(0)
   const [loading, setLoading] = useState(false)
-  const [favorites, setFavorites] = useState(() => getFavorites())
   const solarTerm = getSolarTerm() // 오늘 24절기 (표시 + 추천 시즌 키워드)
 
   useEffect(() => {
@@ -45,7 +44,7 @@ function HomePage({ settings }) {
     setLoading(true)
     // 추천은 실제 기온이 아니라 체감온도(feel) 기준 + 강수 여부 반영
     // 옷장은 탭 전환 시 HomePage가 재마운트되므로 호출 시점에 최신을 읽는다
-    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain, settings.tone, settings.fit, getClosetForAI())
+    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain, settings.tone, settings.fit, closetForAI(closet))
       .then((data) => {
         setPresets(data)
         setSelectedPreset(0)
@@ -58,15 +57,15 @@ function HomePage({ settings }) {
   }, [weather.feel, weather.rain, situation, settings.gender, settings.tone, settings.fit])
 
   const preset = presets[selectedPreset]
-  const saved = preset ? isFavorite(preset) : false
+  const saved = preset ? isFavorite(favorites, preset) : false
 
   const handleToggleFavorite = () => {
     if (!preset) return
-    setFavorites(toggleFavorite(preset, { situation, temp: weather.temp }))
+    setFavorites(toggleFavorite(favorites, preset, { situation, temp: weather.temp }))
   }
 
   const handleRemoveFavorite = (id) => {
-    setFavorites(removeFavorite(id))
+    setFavorites(removeFavorite(favorites, id))
   }
 
   const renderColorChip = (color) =>

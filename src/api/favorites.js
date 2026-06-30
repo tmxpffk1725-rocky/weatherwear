@@ -1,4 +1,5 @@
-const FAVORITES_KEY = 'weatherwear_favorites'
+// 찜한 코디 헬퍼 — 순수 함수(주어진 배열을 받아 새 배열 반환).
+// 실제 저장은 App 상태 + 백엔드 동기화가 담당한다.
 
 // 코디 1세트를 식별하는 id (4개 상품 productId 조합)
 const presetKey = (preset) => {
@@ -8,7 +9,7 @@ const presetKey = (preset) => {
     .join('|')
 }
 
-// 렌더에 필요한 필드만 추림
+// 렌더에 필요한 필드만 추림 (보유 옷은 productId 없이 name/color 유지)
 const slimItem = (item) => {
   if (!item) return null
   return {
@@ -18,44 +19,25 @@ const slimItem = (item) => {
     lprice: item.lprice,
     mallName: item.mallName,
     productId: item.productId,
+    owned: item.owned,
+    name: item.name,
+    color: item.color,
   }
 }
 
-export const getFavorites = () => {
-  const raw = localStorage.getItem(FAVORITES_KEY)
-  if (!raw) return []
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return []
-  }
-}
-
-const save = (favorites) => {
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites))
-}
-
-export const isFavorite = (preset) => {
+export const isFavorite = (favorites, preset) => {
   const id = presetKey(preset)
   if (!id) return false
-  return getFavorites().some((f) => f.id === id)
+  return favorites.some((f) => f.id === id)
 }
 
-export const removeFavorite = (id) => {
-  const next = getFavorites().filter((f) => f.id !== id)
-  save(next)
-  return next
-}
+export const removeFavorite = (favorites, id) => favorites.filter((f) => f.id !== id)
 
 // 저장/해제 토글. meta = { situation, temp }
-export const toggleFavorite = (preset, meta = {}) => {
+export const toggleFavorite = (favorites, preset, meta = {}) => {
   const id = presetKey(preset)
-  if (!id) return getFavorites()
-
-  const favorites = getFavorites()
-  if (favorites.some((f) => f.id === id)) {
-    return removeFavorite(id)
-  }
+  if (!id) return favorites
+  if (favorites.some((f) => f.id === id)) return removeFavorite(favorites, id)
 
   const entry = {
     id,
@@ -69,7 +51,5 @@ export const toggleFavorite = (preset, meta = {}) => {
       shoes: slimItem(preset.shoes),
     },
   }
-  const next = [entry, ...favorites]
-  save(next)
-  return next
+  return [entry, ...favorites]
 }
