@@ -68,19 +68,29 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
 
   useEffect(() => {
     if (weather.feel === '--') return
+    let cancelled = false // 조건이 바뀌면 진행 중이던 이전 요청 결과는 버린다
     setLoading(true)
     // 추천은 실제 기온이 아니라 체감온도(feel) 기준 + 강수 여부 반영
     // 옷장은 탭 전환 시 HomePage가 재마운트되므로 호출 시점에 최신을 읽는다
-    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain, settings.tone, settings.fit, closetForAI(closet), { min: weather.tmn, max: weather.tmx, pop: weather.pop })
-      .then((data) => {
-        setPresets(data)
+    // onPartial: 1세트가 먼저 오면 즉시 렌더(로딩 해제), 나머지 2세트는 뒤이어 채워짐
+    fetchOutfitPresets(weather.feel, situation, settings.gender, settings.preferredItems, weather.rain, settings.tone, settings.fit, closetForAI(closet), { min: weather.tmn, max: weather.tmx, pop: weather.pop },
+      (partial) => {
+        if (cancelled) return
+        setPresets(partial)
         setSelectedPreset(0)
         setLoading(false)
       })
+      .then((data) => {
+        if (cancelled) return
+        setPresets(data)
+        setLoading(false)
+      })
       .catch((err) => {
+        if (cancelled) return
         console.error('쇼핑 불러오기 실패:', err)
         setLoading(false)
       })
+    return () => { cancelled = true }
   }, [weather.feel, weather.rain, situation, settings.gender, settings.tone, settings.fit])
 
   const preset = presets[selectedPreset]
@@ -246,7 +256,7 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
               </button>
             )}
             <div className="preset-tabs">
-              {[0, 1, 2].map((i) => (
+              {presets.map((_, i) => (
                 <button
                   key={i}
                   className={`preset-tab ${selectedPreset === i ? 'active' : ''}`}

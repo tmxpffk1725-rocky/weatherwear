@@ -186,36 +186,23 @@ const fetchOne = async (query, category) => {
 }
 
 // LLM에게 코디 설계 요청 (실패 시 호출부에서 룰 기반으로 폴백)
-const fetchOutfitPlan = async (feel, rain, situation, gender, preferredItems, tone, fit, closet, day) => {
+// count: 생성할 세트 수, exclude: 겹치지 않게 할 기존 컨셉(분할 호출용)
+const fetchOutfitPlan = async (feel, rain, situation, gender, preferredItems, tone, fit, closet, day, count, exclude) => {
   const season = getSolarTerm().season
   const response = await axios.post('/api/outfit', {
     feel, rain, season, situation, gender, preferred: preferredItems, tone, fit, closet,
     // 하루 범위(일 최저/최고기온, 강수확률) — 하루종일 입을 한 벌 설계용
     dayMin: day?.min ?? null, dayMax: day?.max ?? null, rainProb: day?.pop ?? null,
+    count, exclude,
   }, { headers: authHeaders() })
   const presets = response.data?.presets
   if (!Array.isArray(presets) || presets.length === 0) throw new Error('empty plan')
   return presets
 }
 
-export const fetchOutfitPresets = async (temp, situation, gender, preferredItems, rain = false, tone = '', fit = '', closet = [], day = {}) => {
-  cleanHistory()
-  const t = parseInt(temp, 10)
-  const season = getSolarTerm().season
-
-  // 0) 동일 조건 캐시 적중 시 즉시 반환 (LLM/네이버 재호출 생략)
-  const cacheKey = JSON.stringify({ t, rain, situation, gender, tone, fit, season, preferredItems, closet, day })
-  const cached = cacheRead(cacheKey)
-  if (cached) return cached
-
-  // 1) LLM이 코디 설계 → 실패(키 미설정/오류) 시 룰 기반 폴백
-  let plan
-  try {
-    plan = await fetchOutfitPlan(t, rain, situation, gender, preferredItems, tone, fit, closet, day)
-  } catch {
-    plan = buildPresetQueries(t, situation, gender, preferredItems, rain)
-  }
-
+// LLM(또는 룰) plan을 실제 카드(네이버 상품 or 보유 옷)로 렌더링.
+// idxOffset: 세트를 이어붙일 때 id가 겹치지 않게 하는 시작 인덱스.
+const renderPresets = async (plan, closet, idxOffset) => {
   // 보유 옷 id → 옷장 항목 매핑 (owned 해석용)
   const closetById = {}
   closet.forEach((it) => { closetById[it.id] = it })
@@ -256,14 +243,14 @@ export const fetchOutfitPresets = async (temp, situation, gender, preferredItems
     return takeNext(p[c])
   }
 
-  const presets = plan.map((p, i) => {
+  return plan.map((p, i) => {
     const colors = { ...(p.colors || {}) }
     CATEGORIES.forEach((c) => {
       const owned = ownedItem(p, c)
       if (owned) colors[c] = owned.color // 보유 옷 색으로 칩 통일
     })
     const preset = {
-      id: i + 1,
+      id: idxOffset + i + 1,
       concept: p.concept || '',
       reason: p.reason || '',
       tip: p.tip || '',
@@ -278,7 +265,45 @@ export const fetchOutfitPresets = async (temp, situation, gender, preferredItems
     })
     return preset
   })
+}
 
-  cacheWrite(cacheKey, presets)
-  return presets
+// 코디 추천: 1세트를 먼저 빠르게 만들어 onPartial로 즉시 렌더하고,
+// 나머지 2세트는 이어서 백그라운드로 채운다. 전체 완료분을 캐시에 저장.
+export const fetchOutfitPresets = async (temp, situation, gender, preferredItems, rain = false, tone = '', fit = '', closet = [], day = {}, onPartial = null) => {
+  cleanHistory()
+  const t = parseInt(temp, 10)
+  const season = getSolarTerm().season
+
+  // 0) 동일 조건 캐시 적중 시 즉시 반환 (LLM/네이버 재호출 생략)
+  const cacheKey = JSON.stringify({ t, rain, situation, gender, tone, fit, season, preferredItems, closet, day })
+  const cached = cacheRead(cacheKey)
+  if (cached) return cached
+
+  // 1) 1세트 먼저 (LLM 생성이 짧아 첫 화면이 빠르다) → 준비되면 즉시 렌더
+  let first
+  try {
+    const plan1 = await fetchOutfitPlan(t, rain, situation, gender, preferredItems, tone, fit, closet, day, 1, [])
+    first = await renderPresets(plan1, closet, 0)
+  } catch {
+    // LLM 실패(키 미설정/오류) → 룰 기반으로 3세트 한 번에 (분할 없이)
+    const planF = buildPresetQueries(t, situation, gender, preferredItems, rain)
+    const all = await renderPresets(planF, closet, 0)
+    cacheWrite(cacheKey, all)
+    return all
+  }
+  if (onPartial && first.length) onPartial(first)
+
+  // 2) 나머지 2세트는 이어서 (1세트 컨셉은 제외해 중복 방지). 실패해도 1세트는 유지.
+  let rest = []
+  try {
+    const exclude = first.map((p) => p.concept).filter(Boolean)
+    const plan2 = await fetchOutfitPlan(t, rain, situation, gender, preferredItems, tone, fit, closet, day, 2, exclude)
+    rest = await renderPresets(plan2, closet, first.length)
+  } catch {
+    rest = []
+  }
+
+  const all = [...first, ...rest]
+  cacheWrite(cacheKey, all)
+  return all
 }
