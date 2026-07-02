@@ -372,7 +372,8 @@
 /* ===== 색상 스와치 ===== */
 .swatch-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* 18색 = 3칸 × 6줄 (4칸이면 마지막 줄 2개가 어중간하게 남음) */
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px 8px;
 }
 
