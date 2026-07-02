@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { COLORS, COLOR_HEX } from '../api/colors'
+import { downscalePhoto, analyzeClothing } from '../api/vision'
 import '../styles/ClosetPage.css'
 
 // 카테고리별 종류 프리셋 (설정의 선호 아이템 어휘와 통일)
@@ -20,6 +21,12 @@ function ClosetPage({ closet, setCloset }) {
   const [newItem, setNewItem] = useState(EMPTY_ITEM)
   const [custom, setCustom] = useState(false) // 종류 '직접 입력' 모드
 
+  // 사진 등록: 여러 장을 병렬 분석한 뒤 한 장씩 확인·수정하며 저장하는 스텝퍼
+  const fileRef = useRef(null)
+  const [photoQueue, setPhotoQueue] = useState(null) // [{dataUrl, item}] | null(수동 모드)
+  const [photoIdx, setPhotoIdx] = useState(0)
+  const [analyzing, setAnalyzing] = useState(0) // 분석 중인 사진 수(0이면 꺼짐)
+
   const filtered = selectedCategory === '전체'
     ? closet
     : closet.filter((item) => item.category === selectedCategory)
@@ -38,6 +45,8 @@ function ClosetPage({ closet, setCloset }) {
     setShowModal(false)
     setCustom(false)
     setNewItem(EMPTY_ITEM)
+    setPhotoQueue(null)
+    setPhotoIdx(0)
   }
 
   const addItem = () => {
@@ -48,12 +57,83 @@ function ClosetPage({ closet, setCloset }) {
     setShowModal(false)
   }
 
+  // 분석 결과를 확인 폼에 채운다 (인식 실패면 빈 폼 → 수동 입력)
+  const loadPhotoEntry = (entry) => {
+    const it = entry.item
+    if (it && it.category) {
+      setNewItem({ name: it.name || '', category: it.category, color: it.color || '', memo: '' })
+      setCustom(Boolean(it.name) && !CATEGORY_ITEMS[it.category].includes(it.name))
+    } else {
+      setNewItem(EMPTY_ITEM)
+      setCustom(false)
+    }
+  }
+
+  // 사진 선택 → 축소·분석(병렬) → 스텝퍼 모달 열기
+  const handlePhotoFiles = async (e) => {
+    const files = Array.from(e.target.files || [])
+    e.target.value = '' // 같은 사진 재선택 허용
+    if (!files.length) return
+    setAnalyzing(files.length)
+    const entries = await Promise.all(files.map(async (f) => {
+      try {
+        const dataUrl = await downscalePhoto(f)
+        try {
+          return { dataUrl, item: await analyzeClothing(dataUrl) }
+        } catch {
+          return { dataUrl, item: null } // 분석 실패: 썸네일만 두고 수동 입력
+        }
+      } catch {
+        return { dataUrl: null, item: null } // 이미지 디코딩 실패
+      }
+    }))
+    setAnalyzing(0)
+    setPhotoQueue(entries)
+    setPhotoIdx(0)
+    loadPhotoEntry(entries[0])
+    setShowModal(true)
+  }
+
+  // 다음 사진으로 (마지막이면 종료)
+  const advancePhoto = () => {
+    const next = photoIdx + 1
+    if (photoQueue && next < photoQueue.length) {
+      setPhotoIdx(next)
+      loadPhotoEntry(photoQueue[next])
+    } else {
+      closeModal()
+    }
+  }
+
+  const savePhotoItem = () => {
+    if (!newItem.name.trim() || !newItem.color) return
+    setCloset([...closet, { ...newItem, name: newItem.name.trim(), id: Date.now() }])
+    advancePhoto()
+  }
+
   return (
     <div className="closet-page">
       <div className="closet-header">
         <span className="closet-title">내 옷장</span>
-        <button className="add-btn" onClick={() => setShowModal(true)}>+ 추가</button>
+        <div className="closet-header-btns">
+          <button className="photo-btn" onClick={() => fileRef.current?.click()}>📷 사진 등록</button>
+          <button className="add-btn" onClick={() => setShowModal(true)}>+ 추가</button>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          style={{ display: 'none' }}
+          onChange={handlePhotoFiles}
+        />
       </div>
+
+      {analyzing > 0 && (
+        <div className="analyzing-overlay">
+          <div className="analyzing-box">AI가 사진 {analyzing}장을 분석하는 중...</div>
+        </div>
+      )}
 
       <div className="category-filter">
         {categories.map((c) => (
@@ -93,11 +173,23 @@ function ClosetPage({ closet, setCloset }) {
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <span className="modal-title">옷 추가</span>
+              <span className="modal-title">
+                {photoQueue ? `사진으로 등록 (${photoIdx + 1}/${photoQueue.length})` : '옷 추가'}
+              </span>
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
 
             <div className="modal-body">
+              {photoQueue && (
+                <div className="photo-review">
+                  {photoQueue[photoIdx].dataUrl
+                    ? <img className="photo-preview" src={photoQueue[photoIdx].dataUrl} alt="선택한 옷 사진" />
+                    : <div className="photo-preview photo-preview-empty">사진을 불러올 수 없어요</div>}
+                  {!photoQueue[photoIdx].item && (
+                    <div className="vision-note">AI 인식에 실패했어요 — 직접 입력해주세요.</div>
+                  )}
+                </div>
+              )}
               <div className="input-group">
                 <label>카테고리</label>
                 <div className="modal-category-grid">
@@ -171,13 +263,26 @@ function ClosetPage({ closet, setCloset }) {
               </div>
             </div>
 
-            <button
-              className="modal-submit"
-              onClick={addItem}
-              disabled={!newItem.name || !newItem.color}
-            >
-              추가하기
-            </button>
+            {photoQueue ? (
+              <div className="modal-actions">
+                <button className="skip-btn" onClick={advancePhoto}>건너뛰기</button>
+                <button
+                  className="modal-submit"
+                  onClick={savePhotoItem}
+                  disabled={!newItem.name || !newItem.color}
+                >
+                  {photoIdx + 1 < photoQueue.length ? '저장하고 다음' : '저장하고 완료'}
+                </button>
+              </div>
+            ) : (
+              <button
+                className="modal-submit"
+                onClick={addItem}
+                disabled={!newItem.name || !newItem.color}
+              >
+                추가하기
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -11,14 +11,14 @@
 세 부분으로 나뉘어 있다. 헷갈리지 말 것:
 
 1. **프론트엔드** — React 19 + Vite, 순수 CSS(.jsx, TypeScript 아님). Vercel 배포. `src/`.
-2. **추천 함수** — Vercel 서버리스 `api/*.js`(CommonJS). `api/outfit.js`(Claude로 코디 설계), `api/shop.js`(네이버 쇼핑 프록시). `lib/outfit.js`를 공유. 로컬 개발은 `server.js`(Express, 3001)가 같은 엔드포인트를 제공 + Vite 프록시.
+2. **추천 함수** — Vercel 서버리스 `api/*.js`(CommonJS). `api/outfit.js`(Claude로 코디 설계), `api/shop.js`(네이버 쇼핑 프록시), `api/vision.js`(옷 사진 분석 — Claude 비전). `lib/outfit.js`·`lib/vision.js`를 공유. 로컬 개발은 `server.js`(Express, 3001)가 같은 엔드포인트를 제공 + Vite 프록시.
 3. **계정/동기화/날씨 백엔드** — `backend/`(Node + Express + SQLite). **오라클 클라우드 VM에서 별도 운영**. 인증·계정 데이터·날씨 프록시 담당. Vercel과 무관.
 
 프론트는 추천(`/api/shop`,`/api/outfit`, 상대경로 → Vercel)과 백엔드(`/auth/*`,`/api/state|settings|closet|favorites|weather` → `VITE_API_BASE`, 기본 오라클 VM)를 **각각** 호출한다.
 
 ## 기술 스택
 
-- 프론트: React 19, Vite 8, 순수 CSS. `src/api/`(weather/shop/backend/favorites/closet/colors/season/location/history), `src/pages/`(HomePage/ClosetPage/SettingPage/AuthPage).
+- 프론트: React 19, Vite 8, 순수 CSS. `src/api/`(weather/shop/vision/backend/favorites/closet/colors/season/location/history), `src/pages/`(HomePage/ClosetPage/SettingPage/AuthPage).
 - 추천 LLM: Claude API `claude-haiku-4-5`(env `LLM_MODEL`로 변경 가능), 구조화 출력. `@anthropic-ai/sdk`. 룰 기반 폴백(`src/api/shop.js`의 TEMP_RANGE + 24절기).
 - 상품: 네이버 쇼핑검색 API(프록시). 날씨: 기상청 단기예보(공공데이터) — **백엔드 프록시 + 격자 30분 캐시**. GPS + OpenStreetMap Nominatim 역지오코딩. 24절기(`src/api/season.js`).
 - 백엔드: Node 20, Express, better-sqlite3, bcryptjs, jsonwebtoken, express-rate-limit, nodemailer(Gmail).
@@ -55,7 +55,7 @@ npm run server     # 로컬 백엔드 프록시(server.js, 3001)
 ## 작업 규칙
 
 - **워크플로**: master에서 직접 작업 금지. 기능 브랜치 → PR → CI(빌드)·Vercel 체크 → 머지(자동 배포). 커밋·푸시·PR은 사용자가 요청할 때.
-- **디자인**: 모던 미니멀 / 모노크롬 블랙(흰 바탕 + 검정 포인트). 색상 12팔레트(`src/api/colors.js`)를 옷장·추천 색칩에 공유.
+- **디자인**: 모던 미니멀 / 모노크롬 블랙(흰 바탕 + 검정 포인트). 색상 18팔레트(`src/api/colors.js`)를 옷장·추천 색칩에 공유 — `lib/outfit.js`·`lib/vision.js`의 프롬프트 색 목록과 이름 일치 필수.
 - **추천**: LLM 우선 + 룰 기반 폴백. 옷장·피부톤·핏·하루범위(일 최고/최저·강수확률) 반영. 카드는 항상 정확, LLM 설명 문구는 가끔 슬립(허용).
 - **날씨/추천 회복력**: 날씨 실패 시 캐시(stale)→수동 기온 선택. 추천 결과 localStorage 30분 캐시. 외부 API HTTP 에러(429/5xx)는 재시도 말고 즉시 폴백(쿼터 절약).
 - **데이터 저장**: 옷장·찜·설정은 **계정 DB(백엔드)** 가 정본 → 기기 간 동기화. localStorage엔 로그인 토큰·캐시만.

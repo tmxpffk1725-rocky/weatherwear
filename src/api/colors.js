@@ -13,6 +13,12 @@ export const COLORS = [
   { name: '레드', hex: '#c0392b' },
   { name: '핑크', hex: '#e58fa8' },
   { name: '옐로우', hex: '#e6c34a' },
+  { name: '와인', hex: '#722f37' },
+  { name: '민트', hex: '#9fd8cb' },
+  { name: '퍼플', hex: '#7d5ba6' },
+  { name: '오렌지', hex: '#e2823a' },
+  { name: '아이보리', hex: '#f2ecdc' },
+  { name: '차콜', hex: '#3a3d40' },
 ]
 
 export const COLOR_HEX = Object.fromEntries(COLORS.map((c) => [c.name, c.hex]))

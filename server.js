@@ -2,11 +2,13 @@ require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
 const { generateOutfit } = require('./lib/outfit')
+const { analyzeClothing } = require('./lib/vision')
 const { guard } = require('./lib/auth')
 
 const app = express()
 app.use(cors())
-app.use(express.json())
+// 사진 분석(/api/vision)의 base64 이미지가 기본 한도(100kb)를 넘으므로 상향
+app.use(express.json({ limit: '6mb' }))
 
 // API 키는 환경변수에서 읽는다 (.env, gitignore됨 / Vercel은 환경변수 설정)
 const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID
@@ -37,6 +39,18 @@ app.post('/api/outfit', async (req, res) => {
   try {
     const presets = await generateOutfit(req.body || {})
     res.json({ presets })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/vision', async (req, res) => {
+  if (!guard(req, res, 'vision', 60)) return
+  const { image, mediaType } = req.body || {}
+  if (!image) return res.status(400).json({ error: 'image(base64)가 필요합니다.' })
+  try {
+    const item = await analyzeClothing(image, mediaType)
+    res.json({ item })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

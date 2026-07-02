@@ -33,6 +33,104 @@
   opacity: 0.85;
 }
 
+.closet-header-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.photo-btn {
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  border-radius: var(--r-pill);
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.photo-btn:hover {
+  opacity: 0.7;
+}
+
+/* ===== 사진 등록(분석 오버레이 + 확인 스텝퍼) ===== */
+.analyzing-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 110;
+}
+
+.analyzing-box {
+  background: var(--surface);
+  border-radius: var(--r);
+  padding: 18px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  box-shadow: var(--shadow-pop);
+}
+
+.photo-review {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.photo-preview {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.photo-preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-mute);
+}
+
+.vision-note {
+  font-size: 12px;
+  color: var(--text-mute);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.modal-actions .modal-submit {
+  flex: 1;
+}
+
+.skip-btn {
+  padding: 15px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.skip-btn:hover {
+  opacity: 0.7;
+}
+
 .category-filter {
   display: flex;
   gap: 8px;
@@ -123,6 +221,9 @@
   border-radius: 20px;
   padding: 24px;
   box-shadow: var(--shadow-pop);
+  /* 사진 미리보기 + 18색 팔레트로 길어질 수 있어 화면을 넘으면 내부 스크롤 */
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 .modal-header {
