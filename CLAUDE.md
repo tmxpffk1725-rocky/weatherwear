@@ -63,5 +63,6 @@ npm run server     # 로컬 백엔드 프록시(server.js, 3001)
 
 ## 미구현/주의
 
-- 비밀번호 재설정(이메일) — 없음(이메일 인프라는 있음, 추가 가능). DB 자동 백업 — 없음(단일 VM). 개인정보처리방침·약관·모니터링 — 없음.
+- 개인정보처리방침·약관·모니터링 — 없음.
+- DB 백업: VM 내 일일 자동 백업 있음(cron 04:00 KST → `~/backups/`, 14일 보관, `/usr/local/bin/weatherwear-backup.sh`). 오프서버 사본은 아직 — `/etc/weatherwear-backup-par`에 OCI Object Storage PAR URL을 넣으면 업로드 활성화.
 - 기상청 공공 API는 호출 한도·일시 장애가 있음(프록시 캐시로 완화). 한도 소진 시 자정 KST 리셋.

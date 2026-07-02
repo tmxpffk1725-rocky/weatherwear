@@ -28,4 +28,21 @@ async function sendVerifyEmail(to, token) {
   })
 }
 
-module.exports = { sendVerifyEmail, mailerEnabled: enabled }
+async function sendResetEmail(to, token) {
+  if (!enabled) throw new Error('메일 발송이 설정되지 않았습니다.')
+  const link = `${API_BASE}/auth/reset?token=${token}`
+  await transporter.sendMail({
+    from: `WeatherWear <${GMAIL_USER}>`,
+    to,
+    subject: 'WeatherWear 비밀번호 재설정',
+    text: `아래 링크에서 새 비밀번호를 설정하세요 (1시간 안에만 유효):\n${link}\n\n본인이 요청하지 않았다면 이 메일을 무시하세요. 비밀번호는 바뀌지 않습니다.`,
+    html: `<div style="font-family:'Apple SD Gothic Neo',sans-serif;max-width:480px;margin:0 auto;padding:28px 24px">
+      <div style="font-size:20px;font-weight:800;color:#111;margin-bottom:8px">WeatherWear</div>
+      <div style="font-size:15px;color:#444;margin-bottom:20px">아래 버튼에서 새 비밀번호를 설정하세요. 링크는 1시간 동안만 유효해요.</div>
+      <a href="${link}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:13px 22px;border-radius:10px;font-weight:700;font-size:14px">비밀번호 재설정</a>
+      <div style="font-size:12px;color:#999;margin-top:22px;word-break:break-all">본인이 요청하지 않았다면 이 메일을 무시하세요. 버튼이 안 되면 이 주소를 복사해 여세요:<br>${link}</div>
+    </div>`,
+  })
+}
+
+module.exports = { sendVerifyEmail, sendResetEmail, mailerEnabled: enabled }

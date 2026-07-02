@@ -73,6 +73,65 @@
   cursor: pointer;
 }
 
+.delete-account-link {
+  display: block;
+  margin: 12px auto 0;
+  border: none;
+  background: none;
+  padding: 4px;
+  font-size: 12px;
+  color: var(--text-sub);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.delete-confirm {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid #c0392b;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+
+.delete-warning {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.delete-pw {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.delete-error {
+  font-size: 12px;
+  color: #c0392b;
+  margin-bottom: 10px;
+}
+
+.delete-confirm-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: #c0392b;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+}
+
+.delete-confirm-btn:disabled {
+  opacity: 0.6;
+}
+
 .setting-row {
   display: flex;
   gap: 12px;

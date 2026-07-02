@@ -132,6 +132,18 @@
   text-align: center;
 }
 
+.auth-forgot {
+  display: block;
+  margin: 8px 0 0 auto;
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--text-sub);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .auth-resend {
   display: block;
   width: 100%;

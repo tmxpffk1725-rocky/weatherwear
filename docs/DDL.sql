@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
   name          TEXT,                      -- 회원가입 시 이름
   verified      INTEGER NOT NULL DEFAULT 0,-- 이메일 인증 여부(0/1)
   verify_token  TEXT,                      -- 이메일 인증 토큰(인증 후 NULL)
+  reset_token   TEXT,                      -- 비밀번호 재설정 토큰(사용/만료 후 NULL)
+  reset_expires INTEGER,                   -- 재설정 토큰 만료(epoch millis, 발급+1시간)
   created_at    INTEGER NOT NULL           -- epoch millis
 );
 

@@ -29,5 +29,7 @@ db.exec(`
 try { db.exec('ALTER TABLE users ADD COLUMN name TEXT') } catch { /* 이미 존재 */ }
 try { db.exec('ALTER TABLE users ADD COLUMN verified INTEGER NOT NULL DEFAULT 0') } catch { /* 이미 존재 */ }
 try { db.exec('ALTER TABLE users ADD COLUMN verify_token TEXT') } catch { /* 이미 존재 */ }
+try { db.exec('ALTER TABLE users ADD COLUMN reset_token TEXT') } catch { /* 이미 존재 */ }
+try { db.exec('ALTER TABLE users ADD COLUMN reset_expires INTEGER') } catch { /* 이미 존재 */ }
 
 module.exports = db

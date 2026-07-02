@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { login, signup, resend } from '../api/backend'
+import { login, signup, resend, forgot } from '../api/backend'
 import '../styles/AuthPage.css'
 
 const TShirtIcon = () => (
@@ -26,7 +26,7 @@ const Brand = () => (
 )
 
 function AuthPage({ onAuth }) {
-  const [mode, setMode] = useState('login') // 'login' | 'signup'
+  const [mode, setMode] = useState('login') // 'login' | 'signup' | 'forgot'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -39,6 +39,7 @@ function AuthPage({ onAuth }) {
   const [sent, setSent] = useState('') // 가입 후 인증 메일 보낸 이메일
 
   const isLogin = mode === 'login'
+  const isForgot = mode === 'forgot'
 
   const switchMode = () => {
     setMode(isLogin ? 'signup' : 'login')
@@ -58,14 +59,18 @@ function AuthPage({ onAuth }) {
   const submit = async (e) => {
     e.preventDefault()
     setError(''); setNotice('')
-    if (!isLogin) {
+    if (mode === 'signup') {
       if (password.length < 6) { setError('비밀번호는 6자 이상이어야 합니다.'); return }
       if (password !== confirm) { setError('비밀번호가 일치하지 않습니다.'); return }
       if (!name.trim()) { setError('이름을 입력하세요.'); return }
     }
     setLoading(true)
     try {
-      if (isLogin) {
+      if (isForgot) {
+        await forgot(email.trim())
+        setNotice('가입된 이메일이라면 재설정 메일을 보냈어요. 메일함을 확인하세요.')
+        setLoading(false)
+      } else if (isLogin) {
         const info = await login(email.trim(), password)
         onAuth(info)
       } else {
@@ -109,9 +114,11 @@ function AuthPage({ onAuth }) {
         <Brand />
 
         <div className="auth-head">
-          <div className="auth-title">{isLogin ? '로그인' : '회원가입'}</div>
+          <div className="auth-title">{isLogin ? '로그인' : isForgot ? '비밀번호 재설정' : '회원가입'}</div>
           <div className="auth-sub">
-            {isLogin ? '날씨에 맞는 코디를 추천받으세요' : '이메일로 가입하고 시작하세요'}
+            {isLogin ? '날씨에 맞는 코디를 추천받으세요'
+              : isForgot ? '가입한 이메일로 재설정 링크를 보내드려요'
+              : '이메일로 가입하고 시작하세요'}
           </div>
         </div>
 
@@ -122,6 +129,7 @@ function AuthPage({ onAuth }) {
               value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
           </div>
 
+          {!isForgot && (
           <div className="auth-field">
             <label className="auth-label">비밀번호</label>
             <div className="auth-pw">
@@ -132,10 +140,17 @@ function AuthPage({ onAuth }) {
               <button type="button" className="auth-eye" onClick={() => setShowPw(!showPw)}
                 aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 표시'}><EyeIcon off={showPw} /></button>
             </div>
-            {!isLogin && <div className="auth-helper">6자 이상 입력하세요</div>}
+            {mode === 'signup' && <div className="auth-helper">6자 이상 입력하세요</div>}
+            {isLogin && (
+              <button type="button" className="auth-forgot"
+                onClick={() => { setMode('forgot'); setError(''); setNotice('') }}>
+                비밀번호를 잊으셨나요?
+              </button>
+            )}
           </div>
+          )}
 
-          {!isLogin && (
+          {mode === 'signup' && (
             <div className="auth-field">
               <label className="auth-label">비밀번호 확인</label>
               <div className="auth-pw">
@@ -148,7 +163,7 @@ function AuthPage({ onAuth }) {
             </div>
           )}
 
-          {!isLogin && (
+          {mode === 'signup' && (
             <div className="auth-field">
               <label className="auth-label">이름</label>
               <input type="text" className="auth-input" placeholder="예: 홍길동"
@@ -165,15 +180,23 @@ function AuthPage({ onAuth }) {
           {notice && <div className="auth-notice">{notice}</div>}
 
           <button className="auth-submit" type="submit" disabled={loading}>
-            {loading ? '처리 중...' : isLogin ? '로그인' : '회원가입'}
+            {loading ? '처리 중...' : isLogin ? '로그인' : isForgot ? '재설정 메일 보내기' : '회원가입'}
           </button>
         </form>
 
         <div className="auth-switch">
-          {isLogin ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
-          <button className="auth-switch-btn" onClick={switchMode}>
-            {isLogin ? '회원가입' : '로그인'}
-          </button>
+          {isForgot ? (
+            <button className="auth-switch-btn" onClick={() => { setMode('login'); setError(''); setNotice('') }}>
+              로그인으로 돌아가기
+            </button>
+          ) : (
+            <>
+              {isLogin ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
+              <button className="auth-switch-btn" onClick={switchMode}>
+                {isLogin ? '회원가입' : '로그인'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
