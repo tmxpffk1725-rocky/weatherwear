@@ -1,5 +1,10 @@
 // 기상청 단기예보를 서버에서 대신 호출 + 격자(nx,ny)별 캐시.
 // 같은 지역 사용자들이 캐시를 공유해 기상청 호출 한도를 크게 절약하고, 키도 서버에만 둔다.
+// 회복력: 격자별 '마지막 성공 데이터'를 무기한 보관(파일 영속화)해 기상청 장애 시
+// 502 대신 묵은 데이터(stale+asOf)를 제공하고, 일시 오류(순간 429·타임아웃)는 1회 재시도로 흡수.
+const fs = require('fs')
+const path = require('path')
+
 const KMA_KEY = process.env.KMA_KEY
 
 const SLOT_HOURS = [2, 5, 8, 11, 14, 17, 20, 23]
@@ -21,6 +26,22 @@ const candidateSlots = () => {
 
 const cache = new Map() // `${nx},${ny},${date},${time}` -> { at, data }
 const TTL = 30 * 60 * 1000
+
+// 격자별 마지막 성공 데이터 (TTL 없음). 재시작에도 살아남게 파일로 영속화.
+const LAST_GOOD_FILE = path.join(__dirname, 'data', 'weather-last-good.json')
+let lastGood = new Map() // `${nx},${ny}` -> { at, data }
+try {
+  lastGood = new Map(Object.entries(JSON.parse(fs.readFileSync(LAST_GOOD_FILE, 'utf8'))))
+} catch { /* 파일 없음/손상 → 빈 상태로 시작 */ }
+
+const persistLastGood = () => {
+  try {
+    fs.mkdirSync(path.dirname(LAST_GOOD_FILE), { recursive: true })
+    fs.writeFileSync(LAST_GOOD_FILE, JSON.stringify(Object.fromEntries(lastGood)))
+  } catch (e) { console.error('날씨 캐시 저장 실패:', e.message) }
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 const fetchSlot = async (nx, ny, date, time) => {
   // numOfRows를 넉넉히 둬서 같은 응답에 들어오는 일 최고/최저(TMX·TMN)까지 포함 (호출 수는 동일)
@@ -58,25 +79,42 @@ const fetchSlot = async (nx, ny, date, time) => {
   }
 }
 
+const trySlots = async (nx, ny, slots) => {
+  let lastErr
+  for (const s of slots) {
+    try { return await fetchSlot(nx, ny, s.date, s.time) }
+    catch (e) { lastErr = e; if (e.status) break } // HTTP 에러(429/5xx)는 다음 슬롯도 실패 확률 높음 → 중단(한도 절약)
+  }
+  throw lastErr || new Error('weather failed')
+}
+
 async function getWeather(nx, ny) {
   if (!KMA_KEY) throw new Error('KMA_KEY 미설정')
   const slots = candidateSlots()
   const key = `${nx},${ny},${slots[0].date},${slots[0].time}`
   const hit = cache.get(key)
-  if (hit && Date.now() - hit.at < TTL) return hit.data
+  if (hit && Date.now() - hit.at < TTL) return { ...hit.data, asOf: hit.at, stale: false }
 
   let data = null
-  let lastErr
-  for (const s of slots) {
-    try { data = await fetchSlot(nx, ny, s.date, s.time); break }
-    catch (e) { lastErr = e; if (e.status) break } // HTTP 에러(429/5xx)는 즉시 중단(한도 절약)
+  try {
+    data = await trySlots(nx, ny, slots)
+  } catch {
+    // 공공데이터포털의 순간 튕김(간헐 429·타임아웃) 흡수: 1.5초 뒤 딱 1회 재시도
+    await sleep(1500)
+    try {
+      data = await trySlots(nx, ny, slots)
+    } catch (err) {
+      // 그래도 실패 → 마지막 성공 데이터라도 제공 (프론트가 '○분 전 날씨'로 표시)
+      const lg = lastGood.get(`${nx},${ny}`)
+      if (lg) return { ...lg.data, asOf: lg.at, stale: true }
+      throw err
+    }
   }
-  if (!data) {
-    if (hit) return hit.data // 장애/한도 시 오래된 캐시라도 제공
-    throw lastErr || new Error('weather failed')
-  }
-  cache.set(key, { at: Date.now(), data })
-  return data
+  const now = Date.now()
+  cache.set(key, { at: now, data })
+  lastGood.set(`${nx},${ny}`, { at: now, data })
+  persistLastGood()
+  return { ...data, asOf: now, stale: false }
 }
 
 module.exports = { getWeather }
