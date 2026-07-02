@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const rateLimit = require('express-rate-limit')
 const db = require('./db')
-const { sendVerifyEmail } = require('./mailer')
+const { sendVerifyEmail, sendResetEmail } = require('./mailer')
 const { getWeather } = require('./weather')
 
 const APP_URL = process.env.APP_URL || 'https://weatherwear-jade.vercel.app'
@@ -121,6 +121,96 @@ app.post('/auth/resend', authLimiter, async (req, res) => {
 
 app.get('/auth/me', authRequired, (req, res) => {
   res.json({ email: req.user.email, name: req.user.name || '' })
+})
+
+// --- 비밀번호 재설정 ---
+const RESET_TTL = 60 * 60 * 1000 // 1시간
+
+// 재설정 메일 요청. 계정 존재 여부는 노출하지 않고 항상 ok.
+app.post('/auth/forgot', authLimiter, async (req, res) => {
+  const email = (req.body?.email || '').trim().toLowerCase()
+  const user = validEmail(email) && db.prepare('SELECT * FROM users WHERE email = ?').get(email)
+  if (user && user.verified) {
+    const resetToken = crypto.randomBytes(24).toString('hex')
+    db.prepare('UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?')
+      .run(resetToken, Date.now() + RESET_TTL, user.id)
+    try { await sendResetEmail(email, resetToken) } catch (e) { console.error('재설정 메일 실패:', e.message) }
+  }
+  res.json({ ok: true })
+})
+
+// 새 비밀번호 입력 폼 (메일 링크). 토큰은 서버 생성 hex라 그대로 삽입해도 안전.
+const resetFormPage = (token) => `<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WeatherWear 비밀번호 재설정</title></head>
+<body style="font-family:'Apple SD Gothic Neo',sans-serif;background:#fafafa;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0">
+<form id="f" style="text-align:center;padding:32px;max-width:320px;width:100%">
+<div style="font-size:22px;font-weight:800;color:#111;margin-bottom:6px">WeatherWear</div>
+<div style="font-size:14px;color:#444;margin-bottom:20px">새 비밀번호를 입력하세요</div>
+<input id="pw" type="password" placeholder="새 비밀번호 (6자 이상)" minlength="6" required autocomplete="new-password"
+  style="display:block;width:100%;box-sizing:border-box;padding:12px;margin-bottom:10px;border:1px solid #ddd;border-radius:10px;font-size:14px">
+<input id="pw2" type="password" placeholder="새 비밀번호 확인" required autocomplete="new-password"
+  style="display:block;width:100%;box-sizing:border-box;padding:12px;margin-bottom:14px;border:1px solid #ddd;border-radius:10px;font-size:14px">
+<div id="msg" style="font-size:13px;color:#c0392b;margin-bottom:12px"></div>
+<button style="width:100%;background:#111;color:#fff;border:0;padding:13px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">비밀번호 변경</button>
+</form>
+<script>
+document.getElementById('f').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const pw = document.getElementById('pw').value
+  const msg = document.getElementById('msg')
+  if (pw !== document.getElementById('pw2').value) { msg.textContent = '비밀번호가 일치하지 않습니다.'; return }
+  try {
+    const r = await fetch('/auth/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: '${token}', password: pw }) })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) { msg.textContent = d.error || '변경에 실패했습니다.'; return }
+    document.body.innerHTML = '<div style="text-align:center;padding:32px">'
+      + '<div style="font-size:22px;font-weight:800;color:#111;margin-bottom:14px">WeatherWear</div>'
+      + '<div style="font-size:15px;color:#111;margin-bottom:22px">비밀번호가 변경됐어요! 새 비밀번호로 로그인하세요.</div>'
+      + '<a href="${APP_URL}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700;font-size:14px">앱으로 가기</a></div>'
+  } catch { msg.textContent = '네트워크 오류가 발생했습니다.' }
+})
+</script></body></html>`
+
+app.get('/auth/reset', (req, res) => {
+  const token = req.query.token
+  const user = token && db.prepare('SELECT * FROM users WHERE reset_token = ?').get(token)
+  if (!user || !user.reset_expires || user.reset_expires < Date.now()) {
+    return res.status(400).send(resultPage('재설정 링크가 유효하지 않거나 만료됐어요. 앱에서 다시 요청하세요.', false))
+  }
+  res.send(resetFormPage(token))
+})
+
+app.post('/auth/reset', authLimiter, (req, res) => {
+  const { token, password } = req.body || {}
+  if (typeof password !== 'string' || password.length < 6) {
+    return res.status(400).json({ error: '비밀번호는 6자 이상이어야 합니다.' })
+  }
+  const user = token && db.prepare('SELECT * FROM users WHERE reset_token = ?').get(token)
+  if (!user || !user.reset_expires || user.reset_expires < Date.now()) {
+    return res.status(400).json({ error: '재설정 링크가 유효하지 않거나 만료됐어요. 앱에서 다시 요청하세요.' })
+  }
+  db.prepare('UPDATE users SET password_hash = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?')
+    .run(bcrypt.hashSync(password, 10), user.id)
+  res.json({ ok: true })
+})
+
+// --- 회원 탈퇴 (비밀번호 재확인, 계정+데이터 영구 삭제) ---
+const deleteAccount = db.transaction((uid) => {
+  db.prepare('DELETE FROM user_data WHERE user_id = ?').run(uid)
+  db.prepare('DELETE FROM users WHERE id = ?').run(uid)
+})
+
+app.delete('/auth/account', authRequired, (req, res) => {
+  const password = req.body?.password || ''
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.uid)
+  if (!user) return res.status(404).json({ error: '계정을 찾을 수 없습니다.' })
+  if (!bcrypt.compareSync(password, user.password_hash)) {
+    return res.status(401).json({ error: '비밀번호가 올바르지 않습니다.' })
+  }
+  deleteAccount(user.id)
+  res.json({ ok: true })
 })
 
 // --- 데이터 동기화 (계정별 설정·옷장·찜) ---

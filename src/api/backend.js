@@ -36,6 +36,12 @@ export const login = async (email, password) => {
   return { email: e, name: n }
 }
 
+// 비밀번호 재설정 메일 요청 (계정 존재 여부와 무관하게 항상 ok)
+export const forgot = (email) => req('/auth/forgot', { method: 'POST', body: { email } })
+
+// 회원 탈퇴 — 비밀번호 재확인 후 계정+데이터 영구 삭제
+export const deleteAccount = (password) => req('/auth/account', { method: 'DELETE', auth: true, body: { password } })
+
 // 토큰 유효성 확인 → {email, name} 반환(실패 시 throw)
 export const me = () => req('/auth/me', { auth: true })
 

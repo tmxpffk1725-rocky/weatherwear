@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import '../styles/SettingPage.css'
 
 const ALL_ITEMS = {
@@ -14,10 +15,27 @@ const LABEL = {
   shoes: '신발',
 }
 
-function SettingPage({ settings, setSettings, email, name, onLogout }) {
+function SettingPage({ settings, setSettings, email, name, onLogout, onDeleteAccount }) {
   const topSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
   const bottomSizes = ['24', '26', '28', '30', '32', '34', '36']
   const fits = ['슬림핏', '오버핏', '와이드']
+
+  // 회원 탈퇴: 버튼 → 비밀번호 확인 단계 → 영구 삭제
+  const [deleting, setDeleting] = useState(false)
+  const [deletePw, setDeletePw] = useState('')
+  const [deleteError, setDeleteError] = useState('')
+  const [deleteBusy, setDeleteBusy] = useState(false)
+
+  const doDelete = async () => {
+    if (!deletePw) { setDeleteError('비밀번호를 입력하세요.'); return }
+    setDeleteError(''); setDeleteBusy(true)
+    try {
+      await onDeleteAccount(deletePw)
+    } catch (err) {
+      setDeleteError(err.message || '탈퇴에 실패했습니다.')
+      setDeleteBusy(false)
+    }
+  }
 
   const update = (key, value) => {
     setSettings({ ...settings, [key]: value })
@@ -137,6 +155,23 @@ function SettingPage({ settings, setSettings, email, name, onLogout }) {
         {name && <div className="account-name">{name}</div>}
         <div className="account-email">{email}</div>
         <button className="logout-btn" onClick={onLogout}>로그아웃</button>
+        <button className="delete-account-link" onClick={() => { setDeleting(!deleting); setDeletePw(''); setDeleteError('') }}>
+          회원 탈퇴
+        </button>
+        {deleting && (
+          <div className="delete-confirm">
+            <div className="delete-warning">
+              탈퇴하면 옷장·찜·설정이 <b>모두 삭제</b>되며 되돌릴 수 없어요.<br />
+              계속하려면 비밀번호를 입력하세요.
+            </div>
+            <input type="password" className="delete-pw" placeholder="비밀번호"
+              value={deletePw} onChange={(e) => setDeletePw(e.target.value)} autoComplete="current-password" />
+            {deleteError && <div className="delete-error">{deleteError}</div>}
+            <button className="delete-confirm-btn" onClick={doDelete} disabled={deleteBusy}>
+              {deleteBusy ? '처리 중...' : '영구 삭제'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

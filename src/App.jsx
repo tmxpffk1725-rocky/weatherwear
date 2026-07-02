@@ -5,7 +5,7 @@ import ClosetPage from './pages/ClosetPage'
 import SettingPage from './pages/SettingPage'
 import AuthPage from './pages/AuthPage'
 import BottomNav from './components/BottomNav'
-import { getToken, clearToken, me, fetchState, saveSettings, saveCloset, saveFavorites } from './api/backend'
+import { getToken, clearToken, me, fetchState, saveSettings, saveCloset, saveFavorites, deleteAccount } from './api/backend'
 
 const DEFAULT_SETTINGS = {
   gender: '남성',
@@ -55,6 +55,12 @@ function App() {
     setAuthed(true)
   }
 
+  // 탈퇴 성공 시 로그아웃과 동일하게 초기화 (실패는 SettingPage가 표시)
+  const handleDeleteAccount = async (password) => {
+    await deleteAccount(password)
+    logout()
+  }
+
   const logout = () => {
     clearToken()
     setAuthed(false)
@@ -80,7 +86,7 @@ function App() {
     }
     if (currentPage === 'closet') return <ClosetPage closet={closet} setCloset={setCloset} />
     if (currentPage === 'setting') {
-      return <SettingPage settings={settings} setSettings={setSettings} email={email} name={name} onLogout={logout} />
+      return <SettingPage settings={settings} setSettings={setSettings} email={email} name={name} onLogout={logout} onDeleteAccount={handleDeleteAccount} />
     }
   }
 
