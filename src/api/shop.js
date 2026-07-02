@@ -91,6 +91,14 @@ const inRange = (category, item, temp) => {
   return temp >= r[0] && temp <= r[1]
 }
 
+// '운동'은 전용 풀로 교체 — 선호/일반 풀에는 슬랙스·로퍼 같은 비운동 아이템이 섞여 부적합
+const SPORT_RANGE = {
+  top: { '기능성 반팔티': [20, 40], '기능성 긴팔티': [9, 21], '맨투맨': [-10, 10] },
+  bottom: { '트레이닝 반바지': [20, 40], '조거팬츠': [9, 21], '트레이닝팬츠': [-10, 21] },
+  outer: { '바람막이': [-10, 16] },
+  shoes: { '러닝화': [-10, 40] },
+}
+
 // 카테고리별 '날씨에 맞는' 후보 아이템 목록
 const seasonalItems = (category, temp, preferredItems, rain) => {
   // 1) 선호 아이템 중 체감온도에 맞는 것
@@ -124,7 +132,12 @@ const buildPresetQueries = (temp, situation, gender, preferredItems, rain) => {
   const season = getSolarTerm().season // 오늘 절기 기준 시즌 키워드(봄/여름/가을/겨울)
   const cands = {}
   CATEGORIES.forEach((c) => {
-    cands[c] = seasonalItems(c, temp, preferredItems, rain)
+    cands[c] = situation === '운동'
+      ? Object.keys(SPORT_RANGE[c]).filter((i) => {
+          const r = SPORT_RANGE[c][i]
+          return temp >= r[0] && temp <= r[1]
+        })
+      : seasonalItems(c, temp, preferredItems, rain)
   })
 
   const presets = []
