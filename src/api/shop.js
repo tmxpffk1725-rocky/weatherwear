@@ -1,6 +1,13 @@
 import axios from 'axios'
 import { isRecent, addHistory, cleanHistory } from './history'
 import { getSolarTerm } from './season'
+import { getToken } from './backend'
+
+// 추천 API(/api/shop, /api/outfit)는 로그인 토큰을 요구한다 (비용 어뷰징 방어)
+const authHeaders = () => {
+  const t = getToken()
+  return t ? { Authorization: `Bearer ${t}` } : {}
+}
 
 const CATEGORIES = ['top', 'bottom', 'outer', 'shoes']
 
@@ -163,7 +170,8 @@ const fetchOne = async (query, category) => {
   if (!query) return null
   // 상대경로: 로컬은 Vite 프록시(→localhost:3001), 배포(Vercel)는 동일 도메인의 서버리스 함수
   const response = await axios.get('/api/shop', {
-    params: { query, display: 10 }
+    params: { query, display: 10 },
+    headers: authHeaders(),
   })
   const items = response.data.items
   if (!items || items.length === 0) return null
@@ -184,7 +192,7 @@ const fetchOutfitPlan = async (feel, rain, situation, gender, preferredItems, to
     feel, rain, season, situation, gender, preferred: preferredItems, tone, fit, closet,
     // 하루 범위(일 최저/최고기온, 강수확률) — 하루종일 입을 한 벌 설계용
     dayMin: day?.min ?? null, dayMax: day?.max ?? null, rainProb: day?.pop ?? null,
-  })
+  }, { headers: authHeaders() })
   const presets = response.data?.presets
   if (!Array.isArray(presets) || presets.length === 0) throw new Error('empty plan')
   return presets

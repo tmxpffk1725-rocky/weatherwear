@@ -38,7 +38,7 @@ npm run server     # 로컬 백엔드 프록시(server.js, 3001)
 ## 배포
 
 - **프론트**: master 푸시 → Vercel 자동 재배포. PR마다 프리뷰(단, 프리뷰는 백엔드 CORS 미허용이라 로그인 불가 — 실동작은 프로덕션에서).
-- **추천 함수**: `api/*.js`도 Vercel이 함께 배포. env(Vercel): `NAVER_CLIENT_ID/SECRET`, `ANTHROPIC_API_KEY`, `LLM_MODEL`.
+- **추천 함수**: `api/*.js`도 Vercel이 함께 배포. env(Vercel): `NAVER_CLIENT_ID/SECRET`, `ANTHROPIC_API_KEY`, `LLM_MODEL`, `JWT_SECRET`(백엔드와 동일 값 — 추천 API 토큰 검증용, 미설정 시 배포 환경에서 추천 500).
 - **백엔드(오라클 VM)**: 코드 변경 후 VM에서 갱신
   ```bash
   cd ~/weatherwear && git checkout master && git pull && cd backend \
@@ -49,7 +49,7 @@ npm run server     # 로컬 백엔드 프록시(server.js, 3001)
 
 ## 환경변수 (값은 절대 커밋 금지, .env는 gitignore)
 
-- 프론트/Vercel: `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`, `ANTHROPIC_API_KEY`, `LLM_MODEL`, `VITE_API_BASE`(기본값 백엔드 주소 하드코딩)
+- 프론트/Vercel: `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`, `ANTHROPIC_API_KEY`, `LLM_MODEL`, `JWT_SECRET`(백엔드와 동일 값), `VITE_API_BASE`(기본값 백엔드 주소 하드코딩)
 - 백엔드(VM, `/etc/weatherwear-backend.env`): `JWT_SECRET`, `FRONTEND_ORIGINS`, `PORT`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `KMA_KEY`
 
 ## 작업 규칙

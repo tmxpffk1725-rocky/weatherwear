@@ -2,6 +2,7 @@ require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
 const { generateOutfit } = require('./lib/outfit')
+const { guard } = require('./lib/auth')
 
 const app = express()
 app.use(cors())
@@ -12,6 +13,7 @@ const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET
 
 app.get('/api/shop', async (req, res) => {
+  if (!guard(req, res, 'shop', 600)) return
   const { query, display = 10 } = req.query
   try {
     const url =
@@ -31,6 +33,7 @@ app.get('/api/shop', async (req, res) => {
 })
 
 app.post('/api/outfit', async (req, res) => {
+  if (!guard(req, res, 'outfit', 50)) return
   try {
     const presets = await generateOutfit(req.body || {})
     res.json({ presets })
