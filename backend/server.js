@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const rateLimit = require('express-rate-limit')
 const db = require('./db')
-const { sendVerifyEmail, sendResetEmail } = require('./mailer')
+const { sendVerifyEmail, sendCodeEmail, sendResetEmail } = require('./mailer')
 const { getWeather } = require('./weather')
 
 const APP_URL = process.env.APP_URL || 'https://weatherwear-jade.vercel.app'
@@ -57,7 +57,53 @@ const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeade
 
 const validEmail = (e) => typeof e === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
 
-app.post('/auth/signup', authLimiter, async (req, res) => {
+// --- 가입 전 이메일 인증번호 (메모리 보관 — 재시작 시 소멸, 다시 요청하면 됨) ---
+const CODE_TTL = 10 * 60 * 1000 // 10분
+const CODE_MAX_ATTEMPTS = 5
+const signupCodes = new Map() // email → { code, expires, attempts, verified }
+
+// 인증번호 발송: 계정 생성 전에 이메일 소유를 확인한다 (오타 이메일로 계정 선점 방지)
+app.post('/auth/send-code', authLimiter, async (req, res) => {
+  const email = (req.body?.email || '').trim().toLowerCase()
+  if (!validEmail(email)) return res.status(400).json({ error: '이메일 형식이 올바르지 않습니다.' })
+  const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
+  if (exists) return res.status(409).json({ error: '이미 가입된 이메일입니다.' })
+
+  const code = String(crypto.randomInt(100000, 1000000))
+  signupCodes.set(email, { code, expires: Date.now() + CODE_TTL, attempts: 0, verified: false })
+  try {
+    await sendCodeEmail(email, code)
+  } catch (e) {
+    signupCodes.delete(email)
+    console.error('인증번호 발송 실패:', e.message)
+    return res.status(500).json({ error: '인증코드 발송에 실패했습니다. 잠시 후 다시 시도하세요.' })
+  }
+  res.json({ ok: true })
+})
+
+// 인증번호 확인 (5회 초과 시 재요청 필요)
+app.post('/auth/verify-code', authLimiter, (req, res) => {
+  const email = (req.body?.email || '').trim().toLowerCase()
+  const code = String(req.body?.code || '').trim()
+  const entry = signupCodes.get(email)
+  if (!entry || entry.expires < Date.now()) {
+    return res.status(400).json({ error: '인증코드가 만료됐어요. 다시 요청하세요.' })
+  }
+  if (entry.attempts >= CODE_MAX_ATTEMPTS) {
+    signupCodes.delete(email)
+    return res.status(400).json({ error: '시도 횟수를 초과했어요. 인증코드를 다시 요청하세요.' })
+  }
+  if (entry.code !== code) {
+    entry.attempts += 1
+    return res.status(400).json({ error: '인증코드가 올바르지 않습니다.' })
+  }
+  entry.verified = true
+  entry.expires = Date.now() + CODE_TTL // 인증 후 가입 완료까지 10분 연장
+  res.json({ ok: true })
+})
+
+// 가입: 인증번호 확인을 마친 이메일만 허용 → verified 계정으로 생성하고 즉시 로그인
+app.post('/auth/signup', authLimiter, (req, res) => {
   const email = (req.body?.email || '').trim().toLowerCase()
   const password = req.body?.password || ''
   const name = (req.body?.name || '').trim()
@@ -67,22 +113,19 @@ app.post('/auth/signup', authLimiter, async (req, res) => {
   const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email)
   if (exists) return res.status(409).json({ error: '이미 가입된 이메일입니다.' })
 
+  const entry = signupCodes.get(email)
+  if (!entry || !entry.verified || entry.expires < Date.now()) {
+    return res.status(403).json({ error: '이메일 인증을 먼저 완료해주세요.' })
+  }
+  signupCodes.delete(email)
+
   const hash = bcrypt.hashSync(password, 10)
   const now = Date.now()
-  const verifyToken = crypto.randomBytes(24).toString('hex')
-  const info = db.prepare('INSERT INTO users (email, password_hash, name, verify_token, created_at) VALUES (?, ?, ?, ?, ?)').run(email, hash, name, verifyToken, now)
+  const info = db.prepare('INSERT INTO users (email, password_hash, name, verified, created_at) VALUES (?, ?, ?, 1, ?)').run(email, hash, name, now)
   db.prepare('INSERT INTO user_data (user_id, settings, closet, favorites, updated_at) VALUES (?, NULL, NULL, NULL, ?)').run(info.lastInsertRowid, now)
 
-  try {
-    await sendVerifyEmail(email, verifyToken)
-  } catch (e) {
-    // 메일 실패 시 가입 롤백 → 재시도 가능
-    db.prepare('DELETE FROM user_data WHERE user_id = ?').run(info.lastInsertRowid)
-    db.prepare('DELETE FROM users WHERE id = ?').run(info.lastInsertRowid)
-    console.error('인증 메일 발송 실패:', e.message)
-    return res.status(500).json({ error: '인증 메일 발송에 실패했습니다. 잠시 후 다시 시도하세요.' })
-  }
-  res.json({ message: '인증 메일을 보냈어요. 메일의 링크를 클릭한 뒤 로그인하세요.', email })
+  const user = { id: info.lastInsertRowid, email, name }
+  res.json({ token: signToken(user), email, name })
 })
 
 app.post('/auth/login', authLimiter, (req, res) => {

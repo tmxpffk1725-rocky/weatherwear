@@ -23,11 +23,18 @@ const req = async (path, { method = 'GET', body, auth = false } = {}) => {
   return data
 }
 
-// 가입 → 인증 메일 발송. 자동 로그인 X (이메일 인증 후 로그인). 반환: { message, email }
-export const signup = (email, password, name) =>
-  req('/auth/signup', { method: 'POST', body: { email, password, name } })
+// 가입 전 이메일 인증번호 발송(중복이면 409) / 확인(10분·5회 제한)
+export const sendCode = (email) => req('/auth/send-code', { method: 'POST', body: { email } })
+export const verifyCode = (email, code) => req('/auth/verify-code', { method: 'POST', body: { email, code } })
 
-// 인증 메일 재전송 (미인증 계정)
+// 가입 (인증번호 확인을 마친 이메일만) → 즉시 로그인. 반환: { email, name }
+export const signup = async (email, password, name) => {
+  const { token, email: e, name: n } = await req('/auth/signup', { method: 'POST', body: { email, password, name } })
+  setToken(token)
+  return { email: e, name: n }
+}
+
+// 인증 메일 재전송 (레거시 미인증 계정용)
 export const resend = (email) => req('/auth/resend', { method: 'POST', body: { email } })
 
 export const login = async (email, password) => {

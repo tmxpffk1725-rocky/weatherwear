@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { login, signup, resend, forgot } from '../api/backend'
+import { login, signup, resend, forgot, sendCode, verifyCode } from '../api/backend'
 import '../styles/AuthPage.css'
 
 const TShirtIcon = () => (
@@ -36,14 +36,56 @@ function AuthPage({ onAuth }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState('') // 가입 후 인증 메일 보낸 이메일
+
+  // 가입 전 이메일 인증번호 단계
+  const [code, setCode] = useState('')
+  const [codeSent, setCodeSent] = useState(false)
+  const [codeVerified, setCodeVerified] = useState(false)
+  const [codeLoading, setCodeLoading] = useState(false)
 
   const isLogin = mode === 'login'
   const isForgot = mode === 'forgot'
 
+  const resetCodeState = () => { setCode(''); setCodeSent(false); setCodeVerified(false) }
+
   const switchMode = () => {
     setMode(isLogin ? 'signup' : 'login')
     setError(''); setNotice(''); setConfirm(''); setName('')
+    resetCodeState()
+  }
+
+  // 이메일이 바뀌면 진행 중이던 인증은 무효
+  const changeEmail = (v) => {
+    setEmail(v)
+    if (mode === 'signup') resetCodeState()
+  }
+
+  const doSendCode = async () => {
+    setError(''); setNotice('')
+    if (!email.trim()) { setError('이메일을 입력하세요.'); return }
+    setCodeLoading(true)
+    try {
+      await sendCode(email.trim())
+      setCodeSent(true)
+      setCode('')
+      setNotice('인증코드를 보냈어요. 메일함을 확인하세요. (10분 유효)')
+    } catch (err) {
+      setError(err.message || '인증코드 발송에 실패했습니다.')
+    }
+    setCodeLoading(false)
+  }
+
+  const doVerifyCode = async () => {
+    setError(''); setNotice('')
+    setCodeLoading(true)
+    try {
+      await verifyCode(email.trim(), code.trim())
+      setCodeVerified(true)
+      setNotice('')
+    } catch (err) {
+      setError(err.message || '인증코드 확인에 실패했습니다.')
+    }
+    setCodeLoading(false)
   }
 
   const doResend = async (target) => {
@@ -60,6 +102,7 @@ function AuthPage({ onAuth }) {
     e.preventDefault()
     setError(''); setNotice('')
     if (mode === 'signup') {
+      if (!codeVerified) { setError('이메일 인증을 먼저 완료해주세요.'); return }
       if (password.length < 6) { setError('비밀번호는 6자 이상이어야 합니다.'); return }
       if (password !== confirm) { setError('비밀번호가 일치하지 않습니다.'); return }
       if (!name.trim()) { setError('이름을 입력하세요.'); return }
@@ -74,36 +117,14 @@ function AuthPage({ onAuth }) {
         const info = await login(email.trim(), password)
         onAuth(info)
       } else {
-        await signup(email.trim(), password, name.trim())
-        setSent(email.trim())
-        setLoading(false)
+        // 인증번호 확인을 마친 이메일 → 가입 즉시 로그인
+        const info = await signup(email.trim(), password, name.trim())
+        onAuth(info)
       }
     } catch (err) {
       setError(err.message || '오류가 발생했습니다.')
       setLoading(false)
     }
-  }
-
-  // 가입 후: 메일 확인 안내 화면
-  if (sent) {
-    return (
-      <div className="auth-page">
-        <div className="auth-card">
-          <Brand />
-          <div className="auth-head">
-            <div className="auth-title">메일을 확인하세요</div>
-            <div className="auth-sub">{sent}로 인증 메일을 보냈어요.<br />링크를 클릭한 뒤 로그인하세요.</div>
-          </div>
-          <button className="auth-submit" onClick={() => { setSent(''); setMode('login'); setPassword(''); setError(''); setNotice('') }}>
-            로그인하러 가기
-          </button>
-          {notice && <div className="auth-notice">{notice}</div>}
-          <div className="auth-switch">
-            메일을 못 받으셨나요? <button className="auth-switch-btn" onClick={() => doResend(sent)}>재전송</button>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   const showResend = isLogin && error.includes('인증')
@@ -125,8 +146,34 @@ function AuthPage({ onAuth }) {
         <form className="auth-form" onSubmit={submit}>
           <div className="auth-field">
             <label className="auth-label">이메일</label>
-            <input type="email" className="auth-input" placeholder="you@example.com"
-              value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+            {mode === 'signup' ? (
+              <>
+                <div className="auth-code-row">
+                  <input type="email" className="auth-input" placeholder="you@example.com"
+                    value={email} onChange={(e) => changeEmail(e.target.value)}
+                    autoComplete="email" required disabled={codeVerified} />
+                  <button type="button" className="auth-code-btn"
+                    onClick={doSendCode} disabled={codeLoading || codeVerified}>
+                    {codeVerified ? '인증됨 ✓' : codeSent ? '재발송' : '인증코드 받기'}
+                  </button>
+                </div>
+                {codeSent && !codeVerified && (
+                  <div className="auth-code-row auth-code-verify">
+                    <input type="text" inputMode="numeric" maxLength={6} className="auth-input"
+                      placeholder="인증코드 6자리" value={code}
+                      onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} />
+                    <button type="button" className="auth-code-btn"
+                      onClick={doVerifyCode} disabled={codeLoading || code.length !== 6}>
+                      확인
+                    </button>
+                  </div>
+                )}
+                {codeVerified && <div className="auth-helper auth-code-done">이메일 인증 완료</div>}
+              </>
+            ) : (
+              <input type="email" className="auth-input" placeholder="you@example.com"
+                value={email} onChange={(e) => changeEmail(e.target.value)} autoComplete="email" required />
+            )}
           </div>
 
           {!isForgot && (
