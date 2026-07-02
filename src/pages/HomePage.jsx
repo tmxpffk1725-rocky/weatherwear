@@ -28,7 +28,8 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
     pop: null,
     reh: null,
     tmx: null,
-    tmn: null
+    tmn: null,
+    asOf: null // 데이터 기준 시각 (stale 표시용)
   })
 
   const [situation, setSituation] = useState('출근')
@@ -39,19 +40,20 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
   const [weatherMode, setWeatherMode] = useState('loading') // loading|ok|stale|manual
   const solarTerm = getSolarTerm() // 오늘 24절기 (표시 + 추천 시즌 키워드)
 
-  // 날씨 불러오기: 실패 시 마지막 캐시 → 그것도 없으면 수동 입력 모드
+  // 날씨 불러오기: 서버가 신선/묵은(stale) 데이터를 구분해 줌.
+  // 서버까지 실패하면 기기 캐시 → 그것도 없으면 수동 입력 모드
   const loadWeather = () => {
     setWeatherMode('loading')
     fetchWeather()
       .then((data) => {
-        setWeather({ location: data.location, temp: data.temp, feel: data.feel, desc: data.desc, rain: data.rain, pop: data.pop, reh: data.reh, tmx: data.tmx, tmn: data.tmn })
-        setWeatherMode('ok')
+        setWeather({ location: data.location, temp: data.temp, feel: data.feel, desc: data.desc, rain: data.rain, pop: data.pop, reh: data.reh, tmx: data.tmx, tmn: data.tmn, asOf: data.asOf ?? null })
+        setWeatherMode(data.stale ? 'stale' : 'ok')
       })
       .catch((err) => {
         console.error('날씨 불러오기 실패:', err)
         const cached = getCachedWeather()
         if (cached) {
-          setWeather({ location: cached.location, temp: cached.temp, feel: cached.feel, desc: cached.desc, rain: cached.rain, pop: cached.pop, reh: cached.reh, tmx: cached.tmx, tmn: cached.tmn })
+          setWeather({ location: cached.location, temp: cached.temp, feel: cached.feel, desc: cached.desc, rain: cached.rain, pop: cached.pop, reh: cached.reh, tmx: cached.tmx, tmn: cached.tmn, asOf: cached.asOf ?? cached.cachedAt ?? null })
           setWeatherMode('stale')
         } else {
           setWeatherMode('manual')
@@ -63,7 +65,14 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
 
   // 수동 기온 선택 → 그 값으로 추천
   const applyManual = (feel, rain) => {
-    setWeather({ location: '직접 입력', temp: feel, feel, desc: rain ? '비' : '맑음', rain, pop: null, reh: null, tmx: null, tmn: null })
+    setWeather({ location: '직접 입력', temp: feel, feel, desc: rain ? '비' : '맑음', rain, pop: null, reh: null, tmx: null, tmn: null, asOf: null })
+  }
+
+  // stale 데이터의 경과 시간 표기 ("3분 전" / "2시간 전")
+  const staleAgo = (asOf) => {
+    if (!asOf) return '마지막'
+    const m = Math.max(1, Math.round((Date.now() - asOf) / 60000))
+    return m >= 60 ? `${Math.floor(m / 60)}시간 전` : `${m}분 전`
   }
 
   useEffect(() => {
@@ -198,7 +207,7 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
 
         {weatherMode === 'stale' && (
           <div className="weather-note">
-            기상청 응답 지연 — 마지막 날씨예요
+            기상청 지연 — {staleAgo(weather.asOf)} 날씨예요
             <button className="weather-retry" onClick={loadWeather}>다시 시도</button>
           </div>
         )}
