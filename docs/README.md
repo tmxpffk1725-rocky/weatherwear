@@ -20,10 +20,10 @@ ManageGear 산출물 세트의 구조를 본떠, **스카이 블루 테마**로 
 
 ## 한눈에 보는 WeatherWear
 
-- **제품**: 오늘 날씨(체감·일교차·강수)에 맞는 코디 3세트를 AI가 설계하고 네이버 쇼핑 구매로 연결. 옷장(보유 옷) 반영, 찜, 계정별 동기화.
+- **제품**: 오늘 날씨(체감·일교차·강수)에 맞는 코디 3세트를 AI가 설계하고 네이버 쇼핑 구매로 연결. 옷장(보유 옷) 반영 — 사진 AI 등록(비전) 포함, 찜, 계정별 동기화.
 - **프론트**: React 19 + Vite, 모노크롬 CSS, 모바일 웹 → Vercel
 - **백엔드**: Node 20 + Express + SQLite → 오라클 클라우드 VM(systemd + Caddy HTTPS)
-- **추천**: Vercel 함수 `/api/outfit`(Claude Haiku) + `/api/shop`(네이버 프록시)
+- **추천**: Vercel 함수 `/api/outfit`(Claude Haiku) + `/api/shop`(네이버 프록시) + `/api/vision`(옷 사진 분석)
 - **날씨**: 기상청 단기예보(백엔드 프록시 + 격자 캐시), GPS + Nominatim, 24절기
 - **인증**: 이메일/비밀번호(JWT+bcrypt) + 이메일 인증(Gmail SMTP)
 
