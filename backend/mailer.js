@@ -28,6 +28,23 @@ async function sendVerifyEmail(to, token) {
   })
 }
 
+// 가입 전 이메일 인증번호 (6자리, 폼에 입력)
+async function sendCodeEmail(to, code) {
+  if (!enabled) throw new Error('메일 발송이 설정되지 않았습니다.')
+  await transporter.sendMail({
+    from: `WeatherWear <${GMAIL_USER}>`,
+    to,
+    subject: `WeatherWear 인증코드 ${code}`,
+    text: `WeatherWear 가입 인증코드: ${code}\n10분 안에 가입 화면에 입력하세요.\n\n본인이 요청하지 않았다면 이 메일을 무시하세요.`,
+    html: `<div style="font-family:'Apple SD Gothic Neo',sans-serif;max-width:480px;margin:0 auto;padding:28px 24px">
+      <div style="font-size:20px;font-weight:800;color:#111;margin-bottom:8px">WeatherWear</div>
+      <div style="font-size:15px;color:#444;margin-bottom:20px">가입 화면에 아래 인증코드를 입력하세요. 10분 동안 유효해요.</div>
+      <div style="font-size:32px;font-weight:800;letter-spacing:8px;color:#111;background:#f4f4f4;border-radius:12px;padding:18px 0;text-align:center">${code}</div>
+      <div style="font-size:12px;color:#999;margin-top:22px">본인이 요청하지 않았다면 이 메일을 무시하세요.</div>
+    </div>`,
+  })
+}
+
 async function sendResetEmail(to, token) {
   if (!enabled) throw new Error('메일 발송이 설정되지 않았습니다.')
   const link = `${API_BASE}/auth/reset?token=${token}`
@@ -45,4 +62,4 @@ async function sendResetEmail(to, token) {
   })
 }
 
-module.exports = { sendVerifyEmail, sendResetEmail, mailerEnabled: enabled }
+module.exports = { sendVerifyEmail, sendCodeEmail, sendResetEmail, mailerEnabled: enabled }
