@@ -1,4 +1,7 @@
 // Gmail SMTP로 인증 메일 발송 (nodemailer). 자격증명은 env로만 주입.
+// GMAIL_APP_PASSWORD는 구글 "앱 비밀번호"(2단계 인증 계정에서 발급하는 앱 전용 비밀번호)로,
+// 실제 계정 비밀번호가 아니라서 유출돼도 이 용도만 폐기하면 된다.
+// 개인 Gmail은 일 발송량 한도가 있어 사용자 규모가 커지면 전용 발송 서비스로 교체 예정.
 const nodemailer = require('nodemailer')
 
 const GMAIL_USER = process.env.GMAIL_USER

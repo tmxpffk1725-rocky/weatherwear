@@ -1,3 +1,6 @@
+// 설정 화면 — 추천 개인화 입력(성별·피부톤·사이즈·핏·선호 아이템) + 계정 관리.
+// 여기서 고른 값들이 추천 프롬프트에 그대로 들어간다 (예: 쿨톤 → 푸른 계열 색 우선).
+// 변경 즉시 App의 setSettings 래퍼를 통해 계정 DB에 저장된다.
 import { useState } from 'react'
 import '../styles/SettingPage.css'
 

@@ -1,4 +1,13 @@
-// 오라클 백엔드(계정/동기화) 호출 클라이언트. 토큰은 localStorage에 보관.
+// 오라클 백엔드(계정·동기화·날씨) 호출 클라이언트.
+//
+// 이 앱의 서버는 두 곳으로 나뉜다:
+//  · 오라클 VM 백엔드(이 파일) — 인증, 계정 데이터(설정·옷장·찜), 날씨 프록시.
+//    DB(SQLite)가 있어야 해서 상시 실행 서버가 필요 → 무료 VM에 배치.
+//  · Vercel 서버리스(api/*.js) — AI 추천·상품검색·사진분석. DB가 필요 없는
+//    프록시성 작업이라 프론트와 같은 곳(Vercel)에 함수로 배치.
+//
+// 로그인 토큰(JWT)은 localStorage에 보관하고 모든 인증 요청에 Bearer로 첨부.
+// 서버는 세션을 저장하지 않는다(무상태) — 토큰 서명 검증만으로 사용자를 식별.
 const API_BASE = import.meta.env.VITE_API_BASE || 'https://161.33.11.111.nip.io'
 const TOKEN_KEY = 'weatherwear_token'
 
@@ -6,6 +15,7 @@ export const getToken = () => localStorage.getItem(TOKEN_KEY)
 const setToken = (t) => localStorage.setItem(TOKEN_KEY, t)
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY)
 
+// 공통 요청 헬퍼 — auth: true면 저장된 토큰을 Authorization 헤더로 첨부
 const req = async (path, { method = 'GET', body, auth = false } = {}) => {
   const headers = {}
   if (body) headers['Content-Type'] = 'application/json'

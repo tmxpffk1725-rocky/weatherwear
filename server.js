@@ -1,3 +1,10 @@
+// 로컬 개발용 프록시 서버 (배포 환경에는 없음)
+//
+// 배포에서는 api/*.js가 Vercel 서버리스 함수로 돌지만, 로컬 `npm run dev`에는
+// Vercel이 없으므로 이 Express 서버(3001)가 같은 엔드포인트(/api/shop·outfit·vision)를
+// 대신 제공한다. Vite 프록시가 프론트의 /api 요청을 여기로 넘겨주므로,
+// 프론트 코드는 로컬/배포 구분 없이 항상 상대경로로 호출하면 된다.
+// 핵심 로직은 lib/를 공유하므로 두 환경의 동작이 갈라질 일이 없다.
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
