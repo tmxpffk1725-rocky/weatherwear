@@ -4,6 +4,8 @@
 import { useState } from 'react'
 import '../styles/SettingPage.css'
 
+// 선호 아이템 후보 어휘 — 추천 룰 폴백(TEMP_RANGE)의 아이템 이름과 일치시켜
+// "선호하는데 룰이 모르는 아이템"이 생기지 않게 한다.
 const ALL_ITEMS = {
   top: ['반팔', '니트', '맨투맨', '두꺼운니트', '기모티셔츠', '후드티', '가디건'],
   bottom: ['반바지', '슬랙스', '치노팬츠', '기모바지', '청바지', '조거팬츠'],

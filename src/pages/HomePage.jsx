@@ -112,9 +112,11 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
     return () => { cancelled = true }
   }, [weather.feel, weather.rain, situation, settings.gender, settings.tone, settings.fit])
 
+  // 현재 선택된 세트(탭 1~3)와 그 세트의 찜 여부
   const preset = presets[selectedPreset]
   const saved = preset ? isFavorite(favorites, preset) : false
 
+  // 찜 토글 — 어떤 상황·기온에서 찜했는지 메타도 함께 저장 (찜 카드에 표시)
   const handleToggleFavorite = () => {
     if (!preset) return
     setFavorites(toggleFavorite(favorites, preset, { situation, temp: weather.temp }))
@@ -124,6 +126,7 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
     setFavorites(removeFavorite(favorites, id))
   }
 
+  // AI가 정한 색 이름 → 팔레트 hex로 색점+이름 칩. 팔레트에 없는 색이면 표시 생략(깨짐 방지)
   const renderColorChip = (color) =>
     color && COLOR_HEX[color] ? (
       <span className="outfit-color">
@@ -132,6 +135,8 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
       </span>
     ) : null
 
+  // 코디 카드 한 칸(상의/하의/아우터/신발) 렌더링.
+  // item이 보유 옷({owned:true})이면 '내 옷' 배지, 네이버 상품이면 이미지·가격·구매 링크.
   const renderItem = (item, label, color) => {
     if (!item) return null
     // 옷장 보유 옷: 구매 버튼 없이 '내 옷' 배지로 표시
@@ -173,6 +178,7 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
     )
   }
 
+  // 찜 카드 썸네일용 — 세트에서 실제 존재하는 아이템만 추림(아우터 없는 여름 코디 등)
   const favItemImages = (items) =>
     ['top', 'bottom', 'outer', 'shoes']
       .map((cat) => items[cat])

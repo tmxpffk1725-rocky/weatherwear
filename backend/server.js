@@ -34,6 +34,7 @@ const resultPage = (msg, ok) => `<!doctype html><html lang="ko"><head><meta char
 
 const PORT = process.env.PORT || 3000
 const JWT_SECRET = process.env.JWT_SECRET
+// 시크릿 없이 뜨면 모든 토큰 검증이 무의미해지므로 시작 자체를 거부 (fail-fast)
 if (!JWT_SECRET) {
   console.error('JWT_SECRET 환경변수가 필요합니다.')
   process.exit(1)
@@ -143,6 +144,7 @@ app.post('/auth/login', authLimiter, (req, res) => {
   const email = (req.body?.email || '').trim().toLowerCase()
   const password = req.body?.password || ''
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email)
+  // "계정 없음"과 "비밀번호 틀림"을 같은 메시지로 — 가입 여부를 밖에서 알 수 없게(계정 탐색 방지)
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return res.status(401).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' })
   }
@@ -173,6 +175,7 @@ app.post('/auth/resend', authLimiter, async (req, res) => {
   res.json({ ok: true })
 })
 
+// 앱 시작 시 저장된 토큰이 아직 유효한지 확인하는 용도 (유효하면 자동 로그인)
 app.get('/auth/me', authRequired, (req, res) => {
   res.json({ email: req.user.email, name: req.user.name || '' })
 })
@@ -303,4 +306,6 @@ app.get('/api/weather', authRequired, async (req, res) => {
 
 app.get('/health', (req, res) => res.json({ ok: true }))
 
+// 127.0.0.1에만 바인딩 — 외부에서 이 포트로 직접 못 들어오고,
+// 반드시 Caddy 리버스 프록시(HTTPS 종단)를 거쳐야 한다
 app.listen(PORT, '127.0.0.1', () => console.log(`weatherwear backend on :${PORT}`))

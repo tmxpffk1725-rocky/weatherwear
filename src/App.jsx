@@ -57,6 +57,7 @@ function App() {
       .finally(() => setAuthLoading(false))
   }, [])
 
+  // 로그인/가입 성공 시 AuthPage가 호출 — 계정 데이터를 불러온 뒤 앱 화면으로 전환
   const handleAuth = async (info) => {
     setEmail(info.email)
     setName(info.name)
@@ -70,6 +71,7 @@ function App() {
     logout()
   }
 
+  // 로그아웃: 토큰 삭제 + 메모리 상태 초기화 (계정 데이터는 DB에 그대로 — 재로그인 시 복원)
   const logout = () => {
     clearToken()
     setAuthed(false)
