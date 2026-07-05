@@ -1,3 +1,18 @@
+// 추천 파이프라인 (프론트의 핵심 오케스트레이터)
+//
+// 전체 흐름:
+//   ① 캐시 확인 — 같은 조건(체감온도·상황·설정·옷장·하루범위)이면 저장된 결과 즉시 반환
+//   ② LLM 설계 — /api/outfit(Claude)이 "코디 계획"을 만든다
+//      (계획 = 세트별 컨셉·이유·팁·색 + 카테고리별 네이버 '검색어' + 보유 옷 id)
+//   ③ 상품 검색 — 계획의 검색어들로 /api/shop(네이버)을 병렬 호출
+//   ④ 렌더링 — 검색 결과를 카드로 조립 (보유 옷 칸은 검색 생략하고 '내 옷' 표시)
+//
+// 즉 LLM은 "무엇을 입을지"만 정하고, 실제 상품·가격·링크는 네이버가 담당한다.
+// LLM이 실패하면(키 없음/오류) 체감온도 구간표(TEMP_RANGE) 기반 룰로 폴백하므로
+// 추천 자체는 어떤 상황에도 동작한다.
+//
+// 속도 전략: 1세트를 먼저 만들어 즉시 화면에 주고(onPartial), 나머지 2세트는
+// 뒤이어 채운다 — LLM 생성량이 줄어 첫 화면이 ~10초 → ~3초.
 import axios from 'axios'
 import { isRecent, addHistory, cleanHistory } from './history'
 import { getSolarTerm } from './season'
@@ -47,7 +62,8 @@ const situationMap = {
   '운동': '운동',
 }
 
-// 체감온도(℃) 기준 아이템별 적정 구간 [min, max]
+// [룰 기반 폴백용] 체감온도(℃) 기준 아이템별 적정 구간 [min, max].
+// LLM 없이도 "이 온도에 이 옷" 수준의 추천이 가능하도록 만든 안전망 데이터.
 // (기온별 옷차림 가이드를 앱 아이템 어휘에 맞춰 정리 — 필요하면 자유롭게 조정)
 const TEMP_RANGE = {
   top: {
@@ -239,14 +255,16 @@ const renderPresets = async (plan, closet, idxOffset) => {
     uniqueQueries.map(async (q) => { resultMap[q] = await fetchOne(q, queryCategory[q]) })
   )
 
-  // 같은 검색어를 여러 프리셋이 쓰면 서로 다른 상품을 소비하도록 커서 유지
+  // 같은 검색어를 여러 세트가 쓸 때(예: 세트1·2 모두 "남성 네이비 슬랙스")
+  // 검색 결과 목록에서 서로 다른 상품을 하나씩 꺼내 쓰도록 커서(소비 위치)를 유지.
+  // 이게 없으면 세트마다 똑같은 1등 상품이 반복돼 추천이 단조로워진다.
   const cursor = {}
   const takeNext = (query) => {
     const list = query ? resultMap[query] : null
     if (!list || list.length === 0) return null
     const idx = cursor[query] ?? 0
     cursor[query] = idx + 1
-    return list[idx] ?? list[list.length - 1]
+    return list[idx] ?? list[list.length - 1] // 목록을 다 쓰면 마지막 상품 재사용
   }
 
   // 카테고리 해석: 보유 옷이면 owned 객체, 아니면 네이버 상품

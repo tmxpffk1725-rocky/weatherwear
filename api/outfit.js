@@ -1,4 +1,6 @@
 // Vercel 서버리스 함수 — LLM 코디 설계 (/api/outfit)
+// Vercel은 api/ 폴더의 파일 하나하나가 곧 HTTP 엔드포인트가 된다 (별도 서버 불필요).
+// 실제 로직은 lib/outfit.js에 있고, 이 파일은 인증·상한 검사 후 위임하는 얇은 껍데기.
 const { generateOutfit } = require('../lib/outfit')
 const { guard } = require('../lib/auth')
 

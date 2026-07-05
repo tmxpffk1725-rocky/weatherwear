@@ -1,3 +1,13 @@
+// 홈 화면 — 날씨 카드 + 상황 선택 + AI 추천 코디 + 찜 목록.
+//
+// 데이터 흐름:
+//  1) 마운트 시 날씨 로드 (성공 ok / 서버가 묵은 데이터 주면 stale / 다 실패면 manual)
+//  2) 체감온도가 정해지면 추천 호출 — 1세트가 먼저 오면(onPartial) 즉시 렌더,
+//     나머지 2세트는 뒤이어 채워짐 (탭 번호도 그만큼만 표시)
+//  3) 추천은 실제 기온이 아니라 '체감온도' 기준 — 같은 20°라도 바람 불면 다르게 입으니까
+//
+// weatherMode 상태: loading(로딩) → ok(정상) | stale(묵은 날씨 + 재시도 버튼)
+//                   | manual(수동 기온 선택 — 최후 폴백)
 import { useState, useEffect } from 'react'
 import { fetchWeather, getCachedWeather } from '../api/weather'
 import { fetchOutfitPresets } from '../api/shop'

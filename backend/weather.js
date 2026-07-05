@@ -7,6 +7,9 @@ const path = require('path')
 
 const KMA_KEY = process.env.KMA_KEY
 
+// 기상청 단기예보는 하루 8번, 정해진 시각(발표 슬롯)에만 발표된다.
+// 조회할 때는 "가장 최근에 발표된 슬롯"을 base_date/base_time으로 지정해야 하며,
+// 최신 슬롯이 아직 준비 전이면 그 이전 슬롯으로 물러나며 시도한다(candidateSlots).
 const SLOT_HOURS = [2, 5, 8, 11, 14, 17, 20, 23]
 const pad = (n) => String(n).padStart(2, '0')
 

@@ -1,3 +1,11 @@
+// 앱 루트 — 인증 게이트 + 전역 상태의 단일 출처.
+//
+// 구조:
+//  · 로그인 전: AuthPage만 노출 (미로그인 사용 차단)
+//  · 로그인 후: 하단 탭으로 Home(추천)/Closet(옷장)/Setting(설정) 전환
+//  · settings·closet·favorites는 여기서만 소유하고 각 페이지에 props로 내려준다.
+//    setXxx 래퍼가 "화면 상태 갱신 + 백엔드 저장"을 한 번에 처리하므로
+//    페이지들은 저장을 신경 쓸 필요가 없다 (정본은 항상 계정 DB).
 import { useState, useEffect } from 'react'
 import './App.css'
 import HomePage from './pages/HomePage'
@@ -39,7 +47,8 @@ function App() {
     setFavoritesState(Array.isArray(state.favorites) ? state.favorites : [])
   }
 
-  // 앱 시작: 토큰 검증 + 계정 데이터 로드
+  // 앱 시작: 저장된 토큰이 유효하면(/auth/me 통과) 자동 로그인 + 계정 데이터 로드.
+  // 토큰이 만료·위조면 지우고 로그인 화면으로.
   useEffect(() => {
     if (!getToken()) { setAuthLoading(false); return }
     me()

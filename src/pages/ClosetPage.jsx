@@ -1,3 +1,12 @@
+// 옷장 화면 — 보유 옷 목록 + 등록(수동/사진) 모달.
+//
+// 등록 방법 두 가지가 같은 모달 폼을 공유한다:
+//  · 수동: 카테고리·종류 칩 탭 + 색 스와치 선택
+//  · 사진: 여러 장 선택 → AI(비전)가 병렬 분석 → 한 장씩 확인 스텝퍼(1/N)로
+//    AI가 채운 폼을 검토·수정 후 저장. AI는 조명에 따라 색을 틀릴 수 있어
+//    "자동 저장"이 아니라 반드시 사용자 확인을 거친다 (건너뛰기 가능).
+//
+// 여기 등록된 옷은 추천 시 LLM에 전달되어 "보유 옷 활용 + 부족분만 구매" 코디가 된다.
 import { useState, useRef } from 'react'
 import { COLORS, COLOR_HEX } from '../api/colors'
 import { downscalePhoto, analyzeClothing } from '../api/vision'

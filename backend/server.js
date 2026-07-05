@@ -1,5 +1,14 @@
-// WeatherWear 백엔드 — 이메일/비밀번호 로그인 + 계정별 데이터(설정·옷장·찜) 동기화.
-// 오라클 클라우드 VM에서 실행. 프론트(Vercel)는 이 API를 호출한다.
+// WeatherWear 백엔드 — 이메일/비밀번호 로그인 + 계정별 데이터(설정·옷장·찜) 동기화 + 날씨 프록시.
+// 오라클 클라우드 VM에서 systemd로 상시 실행. 프론트(Vercel)는 이 API를 호출한다.
+//
+// 보안 설계 요약 (포트폴리오 질문 대비):
+//  · 비밀번호: bcrypt 해시로만 저장 — 해시는 되돌릴 수 없어 DB가 유출돼도 원문을 모른다.
+//    bcrypt는 일부러 느린 알고리즘이라 무차별 대입도 비현실적.
+//  · 로그인 상태: JWT(서명된 토큰, 30일). 서버는 세션을 저장하지 않고(무상태)
+//    요청마다 토큰 서명을 JWT_SECRET으로 검증해 사용자를 식별한다.
+//  · 무차별 대입 방어: 인증 관련 엔드포인트에 rate limit(15분 30회).
+//  · 네트워크: 앱은 127.0.0.1에만 바인딩하고, 외부 노출은 Caddy(자동 HTTPS)가 대신한다.
+//  · CORS: 허용한 프론트 출처(FRONTEND_ORIGINS)만 브라우저 호출 가능.
 const crypto = require('crypto')
 const express = require('express')
 const cors = require('cors')
@@ -38,8 +47,10 @@ app.use(express.json({ limit: '1mb' }))
 app.use(cors({ origin: ORIGINS }))
 
 // --- 인증 ---
+// JWT 발급: payload(uid·email·name)를 JWT_SECRET으로 서명. 클라이언트가 위조하면 서명이 깨진다.
 const signToken = (user) => jwt.sign({ uid: user.id, email: user.email, name: user.name || '' }, JWT_SECRET, { expiresIn: '30d' })
 
+// 보호 라우트용 미들웨어: Authorization: Bearer <토큰> 검증 → req.user에 payload 주입
 const authRequired = (req, res, next) => {
   const h = req.headers.authorization || ''
   const token = h.startsWith('Bearer ') ? h.slice(7) : null
