@@ -12,7 +12,9 @@ import { COLORS, COLOR_HEX } from '../api/colors'
 import { downscalePhoto, analyzeClothing } from '../api/vision'
 import '../styles/ClosetPage.css'
 
-// 카테고리별 종류 프리셋 (설정의 선호 아이템 어휘와 통일)
+// 카테고리별 종류 프리셋 — 타이핑 없이 탭만으로 등록하게 하는 어휘.
+// 설정의 선호 아이템·비전 분석(lib/vision.js)의 어휘와 통일해, 등록된 옷 이름이
+// 추천 매칭에서 그대로 인식되도록 한다 (어휘가 흩어지면 "긴팔티"="롱슬리브" 매칭 실패).
 const CATEGORY_ITEMS = {
   '상의': ['반팔', '민소매', '셔츠', '카라티', '긴팔', '맨투맨', '후드티', '니트', '가디건', '두꺼운니트', '기모티'],
   '하의': ['반바지', '린넨바지', '슬랙스', '면바지', '청바지', '조거팬츠', '와이드팬츠', '기모바지'],
@@ -23,6 +25,7 @@ const CATEGORY_ITEMS = {
 const EMPTY_ITEM = { name: '', category: '상의', color: '', memo: '' }
 
 function ClosetPage({ closet, setCloset }) {
+  // 목록 상단 카테고리 필터 (표시용 — 저장 데이터에는 영향 없음)
   const [selectedCategory, setSelectedCategory] = useState('전체')
   const categories = ['전체', '상의', '하의', '신발', '아우터']
 
@@ -40,6 +43,7 @@ function ClosetPage({ closet, setCloset }) {
     ? closet
     : closet.filter((item) => item.category === selectedCategory)
 
+  // setCloset은 App의 래퍼라 삭제 즉시 백엔드에도 반영된다 (별도 저장 버튼 없음)
   const deleteItem = (id) => {
     setCloset(closet.filter((item) => item.id !== id))
   }
@@ -58,6 +62,7 @@ function ClosetPage({ closet, setCloset }) {
     setPhotoIdx(0)
   }
 
+  // 수동 등록 저장 — id는 등록 시각(ms)으로 충분히 유일 (한 사람이 1ms에 두 번 못 누름)
   const addItem = () => {
     if (!newItem.name.trim() || !newItem.color) return
     setCloset([...closet, { ...newItem, name: newItem.name.trim(), id: Date.now() }])

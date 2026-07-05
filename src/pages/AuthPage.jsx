@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { login, signup, resend, forgot, sendCode, verifyCode } from '../api/backend'
 import '../styles/AuthPage.css'
 
+// 아이콘은 라이브러리 없이 인라인 SVG — 번들 크기를 아끼고 색은 currentColor로 테마 따라감
 const TShirtIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -96,6 +97,7 @@ function AuthPage({ onAuth }) {
     setCodeLoading(false)
   }
 
+  // 레거시 미인증 계정용 인증 메일 재전송 (성공/실패 관계없이 안내만 — 계정 존재 노출 방지)
   const doResend = async (target) => {
     setNotice(''); setError('')
     try {
@@ -106,6 +108,8 @@ function AuthPage({ onAuth }) {
     }
   }
 
+  // 폼 제출 — mode에 따라 로그인/가입/재설정 분기.
+  // 가입은 서버도 인증 여부를 다시 검사하지만, 프론트에서 먼저 걸러 불필요한 요청을 줄인다.
   const submit = async (e) => {
     e.preventDefault()
     setError(''); setNotice('')
@@ -135,6 +139,7 @@ function AuthPage({ onAuth }) {
     }
   }
 
+  // 로그인 에러가 "이메일 인증 필요"(403)일 때만 재전송 버튼 노출 (레거시 계정 구제)
   const showResend = isLogin && error.includes('인증')
 
   return (
