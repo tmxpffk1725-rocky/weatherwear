@@ -382,12 +382,6 @@
   background: #ececec;
 }
 
-.loading {
-  text-align: center;
-  padding: 28px;
-  font-size: 13px;
-  color: var(--text-mute);
-}
 
 /* ===== 찜한 코디 ===== */
 .fav-section {
@@ -494,3 +488,55 @@
   font-weight: 600;
   color: var(--text-sub);
 }
+
+/* ===== 스켈레톤 로딩 =====
+   로딩 중에 최종 레이아웃과 같은 자리에 회색 블록을 깔아
+   "덜컹"(레이아웃 시프트) 없이 자연스럽게 내용이 채워지게 한다. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--border);
+  border-radius: 8px;
+}
+
+/* 왼쪽→오른쪽으로 훑고 지나가는 하이라이트(shimmer) */
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-100%);
+  animation: sk-shimmer 1.4s infinite;
+}
+
+/* 어두운 날씨 카드 위에서는 밝기 반전 */
+.sk-ondark {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.sk-ondark::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+}
+
+@keyframes sk-shimmer {
+  to { transform: translateX(100%); }
+}
+
+/* 움직임을 줄이도록 설정한 사용자는 반짝임 없이 고정 블록만 */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
+}
+
+/* 날씨 카드 스켈레톤 (실제 텍스트 높이·간격과 맞춤) */
+.sk-loc { width: 140px; height: 12px; margin-bottom: 14px; }
+.sk-temp { width: 110px; height: 56px; margin-bottom: 12px; }
+.sk-desc { width: 150px; height: 13px; }
+.sk-icon { width: 44px; height: 44px; border-radius: 50%; }
+.sk-chip { width: 92px; height: 30px; margin-top: 8px; }
+
+/* 추천 코디 스켈레톤 */
+.sk-reason-line { height: 12px; margin: 6px 0; }
+.sk-img { width: 104px; min-height: 104px; border-radius: 0; }
+.sk-cat { width: 64px; height: 11px; margin-bottom: 8px; }
+.sk-name { width: 82%; height: 13px; margin-bottom: 8px; }
+.sk-sub { width: 55%; height: 12px; }
