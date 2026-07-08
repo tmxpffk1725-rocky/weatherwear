@@ -187,6 +187,23 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
   return (
     <div className="home-page">
       <div className="weather-card">
+        {/* 로딩 중엔 실제 카드와 같은 자리·크기의 스켈레톤 → 완료 시 덜컹임 없음 */}
+        {weatherMode === 'loading' ? (
+          <div className="weather-card-top">
+            <div className="weather-main">
+              <div className="skeleton sk-ondark sk-loc" />
+              <div className="skeleton sk-ondark sk-temp" />
+              <div className="skeleton sk-ondark sk-desc" />
+            </div>
+            <div className="weather-side">
+              <div className="skeleton sk-ondark sk-icon" />
+              <div className="weather-chips">
+                <div className="skeleton sk-ondark sk-chip" />
+                <div className="skeleton sk-ondark sk-chip" />
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className="weather-card-top">
           <div className="weather-main">
             <div className="weather-location">📍 {weather.location} · {solarTerm.name}</div>
@@ -220,6 +237,7 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
             </div>
           )}
         </div>
+        )}
 
         {weatherMode === 'stale' && (
           <div className="weather-note">
@@ -295,7 +313,26 @@ function HomePage({ settings, closet, favorites, setFavorites }) {
         </div>
 
         {loading ? (
-          <div className="loading">불러오는 중...</div>
+          /* 추천 스켈레톤 — 이유 박스 + 카드 4칸(상의/하의/아우터/신발)을 실제 레이아웃 그대로 */
+          <>
+            <div className="outfit-reason">
+              <div className="skeleton sk-reason-line" style={{ width: '40%' }} />
+              <div className="skeleton sk-reason-line" style={{ width: '95%' }} />
+              <div className="skeleton sk-reason-line" style={{ width: '70%' }} />
+            </div>
+            <div className="outfit-list">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="outfit-card">
+                  <div className="skeleton sk-img" />
+                  <div className="outfit-info">
+                    <div className="skeleton sk-cat" />
+                    <div className="skeleton sk-name" />
+                    <div className="skeleton sk-sub" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : preset ? (
           <>
             {preset.reason && (
